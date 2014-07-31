@@ -1,15 +1,11 @@
 package org.suecarter.tablediff
 
 import ReportContent._
-import scala.collection.immutable.IndexedSeq
 import java.io._
-import scala.util.parsing.json.JSON
-import collection.JavaConversions._
 
 object HTMLTableDiff {
 
   import TableDiff._
-  import StringTableDiff._
   class ClassExtract[T] { def unapply(a:Any):Option[T] = Some(a.asInstanceOf[T]) }
 
   object MapStrAny extends ClassExtract[Map[String, Any]]
@@ -47,7 +43,7 @@ object HTMLTableDiff {
 
   def writeHTMLFile[R, C, M](reportName: String, directory: File, report: ReportContent[R, C, M], extraHeader: Option[String] = None) {
     val tableString = report match {
-      case TableValueDiffs(diffReport) => toHTMLDiffsString(diffReport, reportName, extraHeader)
+      case TableValueDiffs(diffReport) => toHTMLString(diffReport, reportName, extraHeader)
       case _ => toHTMLString(report, reportName, extraHeader)
     }
     writeStringToFile(directory.getCanonicalPath + "/" + reportNameToLink(reportName), tableString)
@@ -63,10 +59,17 @@ object HTMLTableDiff {
   def writeHTMLDiffAndContext[R, C, M](reportName: String,
                                        directory: File, report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]) {
     val fullName = "FullContext_" + reportName
-    writeHTMLFile(reportName, directory, onlyTheDiffs(report),
-      Some("""<br>Viewing just the diffs. <a href=""""+ reportNameToLink(fullName) + """">See the full report</a>"""))
-    writeHTMLFile(fullName, directory, report,
-      Some("""<br><a href=""""+ reportNameToLink(reportName) + """">Go back to just the diffs</a>"""))
+    val onlyReportDiffs = onlyTheDiffs(report)
+    writeHTMLFile(reportName, directory, onlyReportDiffs,
+      Some("""<br>""" +
+        (if (onlyReportDiffs.nonEmpty && onlyReportDiffs == report)
+          "The report is full of diffs. The full report is the same as the diff report"
+        else {
+          writeHTMLFile(fullName, directory, report,
+            Some("""<br><a href=""""+ reportNameToLink(reportName) + """">Go back to just the diffs</a>"""))
+          "Viewing just the diffs." +
+          """ <a href=""""+ reportNameToLink(fullName) + """">See the full report</a>"""
+        })))
   }
 
   private def footerFixedCols(report: ReportContent[_,_,_]) =
@@ -74,18 +77,19 @@ object HTMLTableDiff {
   def toHTMLString[R, C, M](report: ReportContent[R, C, M],
                             name: String,
                             extraHeader: Option[String] = None) = {
-    htmlHeader(name, extraHeader) + toJsonTable(report) + htmlFooter(footerFixedCols(report))
+    htmlHeader(name, extraHeader.getOrElse("") + (if(report.isEmpty) " This report is empty" else "")) +
+      toJsonTable(report) +
+      htmlFooter(footerFixedCols(report))
   }
 
-  def toHTMLDiffsString[R, C, M](report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]],
-                                 name: String,
-                                 extraHeader: Option[String] = None) = {
-    htmlHeader(name, extraHeader) + toJsonTable(report) + htmlFooter(footerFixedCols(report))
-  }
-
+  // scala.util.parsing.json.JSON not thread safe
+  import scala.util.parsing.json.JSON
+  private object jsonParseLock
   def fromJsonTable(tableString: String) = {
     val jsonString = extractJSON(tableString).getOrElse("")
-    val jsonMap = JSON.parseFull(jsonString)
+    val jsonMap = jsonParseLock.synchronized {
+      JSON.parseFull(jsonString)
+    }
     jsonMap match {
       case Some(MapStrAny(j)) => {
         import org.apache.commons.lang3.StringEscapeUtils.{unescapeHtml4 => unescape}
@@ -115,23 +119,17 @@ object HTMLTableDiff {
 
   def toJsonTable[R, C, M](report: ReportContent[R, C, M], gridName: String = "gridData") = {
     import org.apache.commons.lang3.StringEscapeUtils.{escapeHtml4 => escape}
-    def valueDiffRenderer[T](value: ValueDiff[T]) = {
-      def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
-      value.fold(l => {
-        //TODO Must be able to do this with css
-        l.left.map(x =>
-          if (x.toString == "")
-            ""
-          else
-            htmlColour("red") + "[-</b>" + htmlColour("black") + escape(x.toString) + "</b>" + htmlColour("red") + "-]</b>").getOrElse("") +
-          l.right.map(x =>
-            if (x.toString == "")
-              ""
-            else
-              htmlColour("green") + "{+</b>" + htmlColour("black") + escape(x.toString) + "</b>" + htmlColour("green") + "+}</b>").getOrElse("")
-      },
-        r => r.map(x => htmlColour("black") + escape(x.toString) + "</b>").getOrElse(""))
-    }
+    // If I knew what I was doing with html, this would probably be css
+    def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
+    def valueDiffRenderer[T](value: ValueDiff[T]) =
+      StringTableDiff.valueDiffRenderer(value,
+                                        (x: T) => escape(x.toString),
+                                        htmlColour("red") + "[-</b>" + htmlColour("black"),
+                                        htmlColour("green") + "{+</b>" + htmlColour("black"),
+                                        htmlColour("black"),
+                                        "</b>" + htmlColour("red") + "-]</b>",
+                                        "</b>" + htmlColour("green") + "+}</b>",
+                                        "</b>")
 
     def jsonRowMap[T](row: Seq[T]) = "[" + row.map(x => "\"" + (x match {
       case d: ValueDiff[T] => valueDiffRenderer(d)
@@ -149,7 +147,7 @@ object HTMLTableDiff {
     "var " + gridName + " = {" + List(headerString, bodyString, "\"FixedCols\" : " + report.rowWidth).mkString(",\n") + "};"
   }
 
-  def htmlHeader(name: String, extraHeader: Option[String] = None) =
+  def htmlHeader(name: String, extraHeader: String = "") =
     """
       <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
@@ -186,7 +184,7 @@ body { margin: 0 }
     </head>
     <body>
 <div class="header row">
-<h2>""" + name + """ Main report """ + extraHeader.getOrElse("") + """</h2>
+<h2>""" + name + """ Main report """ + extraHeader + """</h2>
 </div>
 <div id="testGrid" class="body row ">
   <div id="diffDiv">
@@ -264,6 +262,7 @@ lastColumnIndex)
                   |/*
                   | Grid
                   | MIT-style license. Copyright 2012 Matt V. Murphy
+                  | Hacked around by Sue: original here https://github.com/mmurph211/Grid
                   |*/
                   |.g_Base {
                   |    /* Base grid container */
@@ -451,6 +450,7 @@ lastColumnIndex)
       |//
       |// Grid
       |// MIT-style license. Copyright 2012 Matt V. Murphy
+      |// Hacked around by Sue: original here https://github.com/mmurph211/Grid
       |//
       |////////////////////////////////////
       |(function(window, document, undefined) {

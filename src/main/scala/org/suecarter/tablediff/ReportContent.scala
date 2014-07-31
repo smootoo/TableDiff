@@ -37,6 +37,7 @@ case class ReportContent[+R, +C, +M](rowHeaders: ReportSection[R] = emptySection
   assertSectionIsTipTriangle(columnHeaders, "Top right")
 
   def isEmpty = rowWidth == 0 && columnCount == 0 && mainDataColumnCount == 0
+  def nonEmpty = !isEmpty
 
   /**
    * how deep is the row section

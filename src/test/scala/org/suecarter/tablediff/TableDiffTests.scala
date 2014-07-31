@@ -5,6 +5,7 @@ import org.suecarter.tablediff.TableDiff._
 import org.suecarter.tablediff.ReportContent._
 import org.suecarter.tablediff.{DiffLocation => DL}
 import TableDiffTestCases._
+import StringTableDiff._
 import scala.{List => L}
 
 object TableDiffTestCases {
@@ -16,7 +17,7 @@ object TableDiffTestCases {
   def E(l: Any, r: Any) = Left(EitherSide(S(l), S(r)))
 
   def D(a: Any) = Right(S(a))
-  val leftReport = ReportContent(
+  val leftReport = ReportContent[String, String, Double](
     L(L("a", "d"), L("b", "d")),
     L(L("Col1", "Col2", "Col3"),
       L("one", "two", "three")),
@@ -52,6 +53,12 @@ object TableDiffTestCases {
       L("one", "two", "three")),
     L(L(8, 5, 23),
       L(33, 1, 34)))
+  val leftReportWithASmallNumericDiff = ReportContent[String, String, Double](
+    L(L("a", "d"), L("b", "d")),
+    L(L("Col1", "Col2", "Col3"),
+      L("one", "two", "three")),
+    L(L(7, 5, 2),
+      L(33, 1, 34.000001)))
   val longReport = ReportContent(
   L(L("Row1"), L("Row2"), L("Row3"), L("Row4"), L("Row5"), L("Row6")),
   L(),
@@ -73,50 +80,87 @@ object TableDiffTestCases {
 
 class TableDiffTests extends FunSuite {
   test("matching sequences") {
-    val cases: List[(List[String], List[String], List[DiffLocation[String]])] =
+    val cases: List[(String, String, String, List[DiffLocation[Char]], Option[String])] =
       L(
-        (L("a"), L("b"),
-        L(DL("b", n, S(0)), DL("a", S(0), n)))
-        ,(L("a"), L("a"),
-          L(DL("a", S(0), S(0))))
-        ,(L("a", "b"), L("a"),
-          L(DL("a", S(0), S(0)), DL("b", S(1), n)))
-        ,(L("a", "b"), L("a", "c"),
-          L(DL("a", S(0), S(0)), DL("c", n, S(1)), DL("b", S(1), n)))
+        ("case 1", "a", "b",
+          L(DL('b', n, S(0)), DL('a', S(0), n)), Some("[-a-]{+b+}"))
+        , ("case 2", "a", "a",
+          L(DL('a', S(0), S(0))), Some("a"))
+        , ("case 3", "ab", "a",
+          L(DL('a', S(0), S(0)), DL('b', S(1), n)), Some("a[-b-]"))
+        , ("case 4", "ab", "ac",
+          L(DL('a', S(0), S(0)), DL('c', n, S(1)), DL('b', S(1), n)), Some("a[-b-]{+c+}"))
         ,
-        (L("a", "b", "d"), L("a", "c", "d"),
-          L(DL("a", S(0), S(0)), DL("c", n, S(1)), DL("b", S(1), n),
-            DL("d", S(2), S(2))))
+        ("case 5", "abd", "acd",
+          L(DL('a', S(0), S(0)), DL('c', n, S(1)), DL('b', S(1), n),
+            DL('d', S(2), S(2))), Some("a[-b-]{+c+}d"))
         ,
-        (L("a", "b"), L("a", "c", "d"),
-          L(DL("a", S(0), S(0)), DL("c", n, S(1)), DL("b", S(1), n),
-            DL("d", n, S(2))))
-        ,(L("a", "d", "b", "c"), L("b", "a", "d", "a", "c"),
-          L(DL("b", n, S(0)), DL("a", S(0), S(1)),
-            DL("d", S(1), S(2)), DL("a", n, S(3)), DL("b", S(2), n),
-            DL("c", S(3), S(4))))) ++
-        {
-          // Testing sparse diffs
-        val i = 3000 // testing for big sequences to make sure the lcs algo can handle them
-        def xs(x: String) = Stream.continually(x).take(i).toList
-        def xLeftDiffs(x: String, offset: Int = 0) = xs(x).zipWithIndex.map{case(dx, ix) => DL(dx, S(ix+offset), n)}
-        def xRightDiffs(x: String, offset: Int = 0) = xs(x).zipWithIndex.map{case(dx, ix) => DL(dx, n, S(ix+offset))}
+        ("case 6", "ab", "acd",
+          L(DL('a', S(0), S(0)), DL('c', n, S(1)), DL('b', S(1), n),
+            DL('d', n, S(2))), Some("a[-b-]{+cd+}"))
+        , ("case 7", "adbc", "badac",
+          L(DL('b', n, S(0)), DL('a', S(0), S(1)),
+            DL('d', S(1), S(2)), DL('a', n, S(3)), DL('b', S(2), n),
+            DL('c', S(3), S(4))), Some("{+b+}ad[-b-]{+a+}c"))
+        , ("case 7", "adbce", "badacf",
+          L(DL('b', n, S(0)), DL('a', S(0), S(1)),
+            DL('d', S(1), S(2)), DL('a', n, S(3)), DL('b', S(2), n),
+            DL('c', S(3), S(4)), DL('e', S(4), n), DL('f', n, S(5))),
+          Some("[-adbce-]{+badacf+}"))
+        , ("case 8", "", "",
+          L(), Some(""))
+        , ("case 9", "a", "",
+          L(DL('a', S(0), n)), Some("[-a-]"))
+        , ("case 10", "", "a",
+          L(DL('a', n, S(0))), Some("{+a+}"))
+        , ("case 10", "ghij", "abcd",
+          L(DL('a', n, S(0)), DL('b', n, S(1)), DL('c', n, S(2)), DL('d', n, S(3)),
+            DL('g', S(0), n), DL('h', S(1), n), DL('i', S(2), n), DL('j', S(3), n)), Some("[-ghij-]{+abcd+}"))
+      ) ++ {
+        // Testing large sparse diffs
+        val i = 30000 // testing for big sequences to make sure the lcs algo can handle them
+        def xs(x: Char) = Stream.continually(x).take(i).toList
+        def xLeftDiffs(x: Char, offset: Int = 0) = xs(x).zipWithIndex.map { case (dx, ix) => DL(dx, S(ix + offset), n)}
+        def xRightDiffs(x: Char, offset: Int = 0) = xs(x).zipWithIndex.map { case (dx, ix) => DL(dx, n, S(ix + offset))}
         L(
-          // one small match in the middle
-          (xs("a") :+ "c", xs("b") :+ "c", xLeftDiffs("a") ++ xRightDiffs("b") :+ DL("c", S(i), S(i))),
-          // 2 completely different seqs
-          (xs("a"), xs("b"), xLeftDiffs("a") ++ xRightDiffs("b")),
-          // 2 identical seqs
-          (xs("a") ++ xs("b"), xs("a") ++ xs("b"), (xs("a") ++ xs("b")).zipWithIndex.map{case(dx, ix) => DL(dx, S(ix), S(ix))}),
-          // mostly diff with one small match
-          (xs("a") ++ L("c") ++ xs("b"), L("c"), xLeftDiffs("a") ++ xLeftDiffs("b", i+1) :+ DL("c", S(i), S(0)))
-        )
+          ("one small match at the end",
+            xs('a') :+ 'c', xs('b') :+ 'c',
+            xLeftDiffs('a') ++ xRightDiffs('b') :+ DL('c', S(i), S(i))),
+          ("one small match at the start",
+            'c' +: xs('a'), 'c' +: xs('b'),
+            DL('c', S(0), S(0)) +: (xLeftDiffs('a', 1) ++ xRightDiffs('b', 1))),
+          ("two small matches, one at the start, other at end",
+            'c' +: xs('a') :+ 'd', 'c' +: xs('b') :+ 'd',
+            DL('c', S(0), S(0)) +: (xLeftDiffs('a', 1) ++ xRightDiffs('b', 1)) :+ DL('d', S(i + 1), S(i + 1))),
+          ("2 completely different seqs",
+            xs('a'), xs('b'),
+            xLeftDiffs('a') ++ xRightDiffs('b')),
+          ("2 identical seqs",
+            xs('a') ++ xs('b'), xs('a') ++ xs('b'),
+            (xs('a') ++ xs('b')).zipWithIndex.map { case (dx, ix) => DL(dx, S(ix), S(ix))}),
+          ("mostly diff with one small match",
+            xs('a') ++ L('c') ++ xs('b'), L('c'),
+            xLeftDiffs('a') ++ xLeftDiffs('b', i + 1) :+ DL('c', S(i), S(0))),
+          ("mostly diff with one small match on other side",
+            L('c'), xs('a') ++ L('c') ++ xs('b'),
+            xRightDiffs('a') ++ xRightDiffs('b', i + 1) :+ DL('c', S(0), S(i)))
+        ).map(x => (x._1, x._2.mkString, x._3.mkString, x._4, None))
       }
 
     cases.foreach {
-      case (left, right, expected) =>
-        assert(zipLongestCommonSubsequence(left/*.toIndexedSeq.zipWithIndex*/,
-          right/*.toIndexedSeq.zipWithIndex*/).toSet === expected.toSet)
+      case (description, left, right, expected, expectedStringRep) =>
+        val lcs = zipLongestCommonSubsequence(left, right)
+        if (math.max(left.size, right.size) < 100) // small enough to run the pretty algorithm
+          assert(lcs === zipLongestCommonSubsequencePretty(left, right), "validating lcs algo for " + description)
+        def sortDiffs(d: DiffLocation[Char]) = (d.iLeft, d.iRight, d.value)
+        val leftDiffs = lcs.sortBy(sortDiffs)
+        val rightDiffs = expected.map(x => DL(x.value, x.iLeft, x.iRight)).sortBy(sortDiffs)
+        assert(leftDiffs.mkString("\n") === rightDiffs.mkString("\n"), description +
+          (lcs.sortBy(d => (d.iLeft, d.iRight)) zip expected.sortBy(d => (d.iLeft, d.iRight))).
+            filter { case (l, r) => l != r}.mkString("\n"))
+        val stringRep = StringTableDiff.valueDiffRenderer(E(left, right))
+        expectedStringRep.foreach(x => assert(stringRep === x, "DiffStrings " + description + "\n" +
+          left + " " + right + "\n" + "Got " + stringRep + " expected " + x))
     }
   }
 
@@ -283,6 +327,25 @@ class TableDiffTests extends FunSuite {
               "Actual Only Diffs\n" + StringTableDiff.diffReportToString(just))
         })
     }
+  }
+
+  test("Report Diff with custom comparison") {
+    val defaultDiff = onlyTheDiffs(produceReportDiff(leftReport, leftReportWithASmallNumericDiff))
+    assert(!defaultDiff.isEmpty, "Expected to have one diff")
+    import math.abs
+    def smallEnough(l: Option[Any], r: Option[Any]) = {
+      l match {
+        case Some(lNum: Double) => {
+          r match {
+            case Some(rNum: Double) => abs(lNum - rNum)/(abs(lNum) + abs(rNum)) < 0.0000001
+            case _ => false
+          }
+        }
+        case _ => l == r
+      }
+    }
+    val customDiff = onlyTheDiffs(produceReportDiff(leftReport, leftReportWithASmallNumericDiff, smallEnough))
+    assert(customDiff.isEmpty, "Expected no diffs but got\n" + diffReportToString(customDiff))
   }
 
   test("Section Diffs") {

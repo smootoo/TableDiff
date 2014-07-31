@@ -6,16 +6,29 @@ import scala.io.Source
 import java.io.File
 import HTMLTableDiff._
 
+object HTMLTableDiffTests {
+  val tmpDir = {
+    val dir = new File(System.getProperty("java.io.tmpdir") + File.separatorChar + "TableDiffTestsHTMLFiles")
+    dir.mkdirs()
+    dir
+  }
+}
+
 class HTMLTableDiffTests extends FunSuite {
-  val tmpDir = new File(System.getProperty("java.io.tmpdir") + File.separatorChar + "TableDiffTestsHTMLFiles")
-  tmpDir.mkdirs()
+  import HTMLTableDiffTests._
   test("diff html reports") {
     val cases = List(
-      ("recA2.json", "recB2.json")
+      ("recA2.json", "recB2.json"),
+      ("emptyTable.json", "recB2.json"),
+      ("emptyTable.json", "emptyTable.json"),
+      ("emptyTable.json", "emptyJson.json"),
+      ("recA2.json", "emptyJson.json"),
+      ("recA2.json", "emptyHtml.html"),
+      ("emptyJson.json", "emptyHtml.html")
     )
 
-    cases.foreach {
-      case (l, r) =>
+    cases.zipWithIndex.foreach {
+      case ((l, r), index) =>
         val sourceLeft = Source.fromURL(getClass.getResource("/" + l), "latin1")
         val leftReport = fromJsonTable(sourceLeft.getLines().mkString(" "))
         val bounceReport = fromJsonTable(toJsonTable(leftReport))
@@ -26,11 +39,12 @@ class HTMLTableDiffTests extends FunSuite {
         val rightReport = fromJsonTable(sourceRight.getLines().mkString(" "))
         val diffReport: ReportContent[ValueDiff[String], ValueDiff[String], ValueDiff[String]] = produceReportDiff(leftReport, rightReport)
     //    println(StringTableDiff.diffReportToString(diffReport))
-        assert(!leftReport.isEmpty)
-        assert(!rightReport.isEmpty)
-        assert(!diffReport.isEmpty)
+        def emptyCheck(reportName: String, report: ReportContent[_,_,_]) = reportName.contains("empty") || !report.isEmpty
+        assert(emptyCheck(l, leftReport))
+        assert(emptyCheck(r, rightReport))
+        assert(emptyCheck(l+r, diffReport))
 //        println(StringTableDiff.diffReportToString(TableDiff.onlyTheDiffs(diffReport)))
-      HTMLTableDiff.writeHTMLDiffAndContext(l, tmpDir, diffReport)
+      HTMLTableDiff.writeHTMLDiffAndContext(l+index, tmpDir, diffReport)
     }
   }
   test("escape strings") {
