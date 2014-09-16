@@ -5,6 +5,7 @@ import org.suecarter.tablediff.TableDiff._
 import scala.io.Source
 import java.io.File
 import HTMLTableDiff._
+import StringTableDiff._
 
 object HTMLTableDiffTests {
   val tmpDir = {
@@ -56,10 +57,17 @@ class HTMLTableDiffTests extends FunSuite {
         L("one", "two", "three")),
       L(L(7, 5, 2),
         L(33, 1, 34)),
-      L(L("AHead", "BHead"), L("","")))
+      L(L("AHead",
+        """BHead
+          |2Line""".stripMargin), L("","")))
     val bounceReport = fromJsonTable(toJsonTable(report))
     assert(bounceReport.toString === report.toString)
     HTMLTableDiff.writeHTMLFile("sue", tmpDir, report)
+  }
+  test("render odd shaped reports") {
+    import TableDiffTestCases._
+    assert(diffReportToString(fromJsonTable(toJsonTable(unexpectedShapedReport))) ===
+      diffReportToString(unexpectedShapedReport))
   }
   test("render simple tables") {
     import StringTableDiffTests._

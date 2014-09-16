@@ -39,7 +39,7 @@ object TableDiff {
    */
   type ValueDiff[T] = Either[EitherSide[T], Option[T]]
 
-  private def pivotHeaders[T](reportSection: ReportSection[T]): ReportSection[T] = {
+  protected[tablediff] def pivotHeaders[T](reportSection: ReportSection[T]): ReportSection[T] = {
     @tailrec
     def inner(accumulator: ReportSection[T], r: ReportSection[T]): ReportSection[T] =
       r.filter(_.nonEmpty) match {

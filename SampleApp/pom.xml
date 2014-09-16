@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <tablediff.version>0.9.9-SNAPSHOT</tablediff.version>
+        <tablediff.version>0.9.9</tablediff.version>
     </properties>
 
 

@@ -7,7 +7,7 @@ class StringTableDiffTests extends FunSuite {
   test("reports to string") {
     StringTableDiffTests.cases.foreach {
       case (l, r) =>
-//        println(StringTableDiff.diffReportToString(l))
+        //println(StringTableDiff.diffReportToString(l))
         assert(StringTableDiff.diffReportToString(l) === r.stripMargin('^'))
         assert(onlyTheDiffs(produceReportDiff(l, l)).isEmpty, "Report " + l + " does not match itself on a reflective diff")
     }
@@ -16,8 +16,16 @@ class StringTableDiffTests extends FunSuite {
 
 object StringTableDiffTests {
   val topLeft = List(List("", ""), List("a", "b"))
+  val multiLineTopLeft = List(List("", ""), List("a", """b
+                                                        |z""".stripMargin))
   val topRight = List(List("d", ""),List("f","g"))
+  val multiLineTopRight = List(List(
+    """d
+      |z""".stripMargin, ""),List("f","g"))
   val bottomLeft = List(List("M","N"),List("","O"))
+  val multiLineBottomLeft = List(List("M",
+    """N
+      |Z""".stripMargin),List("","O"))
   val bottomRight = List(List(1,2),List(3))
   val emptySquare = Seq(Seq("", ""), Seq("", ""))
   val cases = List(
@@ -37,6 +45,31 @@ object StringTableDiffTests {
                                        ^| | |f|g|
                                        ^+---+---+
                                        ^|M|N|1|2|
+                                       ^| |O|3| |
+                                       ^+---+---+
+                                      ^""")
+    ,
+    (ReportContent(multiLineBottomLeft, topRight, bottomRight, multiLineTopLeft),
+                                    """^+---+---+
+                                       ^| | |d| |
+                                       ^|a|b|f|g|
+                                       ^| |z| | |
+                                       ^+---+---+
+                                       ^|M|N|1|2|
+                                       ^| |Z| | |
+                                       ^| |O|3| |
+                                       ^+---+---+
+                                      ^""")
+    ,
+    (ReportContent(multiLineBottomLeft, multiLineTopRight, bottomRight, multiLineTopLeft),
+                                    """^+---+---+
+                                       ^| | |d| |
+                                       ^| | |z| |
+                                       ^|a|b|f|g|
+                                       ^| |z| | |
+                                       ^+---+---+
+                                       ^|M|N|1|2|
+                                       ^| |Z| | |
                                        ^| |O|3| |
                                        ^+---+---+
                                       ^""")

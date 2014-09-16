@@ -93,6 +93,9 @@ object HTMLTableDiff {
     jsonMap match {
       case Some(MapStrAny(j)) => {
         import org.apache.commons.lang3.StringEscapeUtils.{unescapeHtml4 => unescape}
+        def unescapeFromJson(s: String) = {
+          unescape(s.replaceAll("""\n""","\n"))
+        }
         val rowWidth = j.getOrElse("FixedCols", 2.0) match {
           case x: Double => x.toInt
         }
@@ -110,7 +113,7 @@ object HTMLTableDiff {
           val (rowHead, mainBit) = row.splitAt(rowWidth)
           (headers._1 ++ Seq(rowHead), headers._2 ++ Seq(mainBit))
         })
-        val escapeMe = (cell: Any) => unescape(cell.toString)
+        val escapeMe = (cell: Any) => unescapeFromJson(cell.toString)
         ReportContent(rows, columnHeaders, mainData, rowColumnHeaders).mapAllCells(escapeMe)
       }
       case None => emptyReport
@@ -119,11 +122,14 @@ object HTMLTableDiff {
 
   def toJsonTable[R, C, M](report: ReportContent[R, C, M], gridName: String = "gridData") = {
     import org.apache.commons.lang3.StringEscapeUtils.{escapeHtml4 => escape}
+    def escapeForJson(s: String) = {
+      escape(s.replaceAll("\n","""\\\n"""))
+    }
     // If I knew what I was doing with html, this would probably be css
     def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
     def valueDiffRenderer[T](value: ValueDiff[T]) =
       StringTableDiff.valueDiffRenderer(value,
-                                        (x: T) => escape(x.toString),
+                                        (x: T) => escapeForJson(x.toString),
                                         htmlColour("red") + "[-</b>" + htmlColour("black"),
                                         htmlColour("green") + "{+</b>" + htmlColour("black"),
                                         htmlColour("black"),
@@ -132,8 +138,8 @@ object HTMLTableDiff {
                                         "</b>")
 
     def jsonRowMap[T](row: Seq[T]) = "[" + row.map(x => "\"" + (x match {
-      case d: ValueDiff[T] => valueDiffRenderer(d)
-      case s => escape(x.toString)
+      case d: ValueDiff[T @unchecked] => valueDiffRenderer(d) //unchecked as we don't care about the type in ValueDiff
+      case s => escapeForJson(x.toString)
     }) + "\"").mkString(",") + "]"
     def bodyMap[T](name: String, body: Seq[T]) = name + " : [\n" + body.mkString(",\n") + "]\n"
 

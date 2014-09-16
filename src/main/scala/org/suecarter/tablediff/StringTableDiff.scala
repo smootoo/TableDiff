@@ -22,7 +22,7 @@ object StringTableDiff {
         reportSection.map(_.map {
           x => {
             val diffValue: ValueDiff[Any] = x match {
-              case diff: ValueDiff[Any] => diff
+              case diff: ValueDiff[Any @unchecked] => diff //unchecked as we don't care about the type in ValueDiff
               case value => Right(Some(value))
             }
             diffValue
@@ -37,9 +37,18 @@ object StringTableDiff {
           columnHeaders = valueDiffise(report.columnHeaders),
           mainData = valueDiffise(report.mainData),
           rowColumnHeaders = valueDiffise(report.rowColumnHeaders))
-      val columnHeaders = flattenColumnHeaders(diffReport).map(h => h.map(valueDiffRenderer(_)))
-      val rows = flattenTableRows(diffReport).map(h => h.map(valueDiffRenderer(_)))
-      val tableRows = columnHeaders ++ rows
+
+      // If the cell contains a multi line string, then extend the report rows
+      def extendMultiLine(rows: ReportSection[String]): ReportSection[String] = {
+        rows.flatMap(row => {
+          val splitRows = row.map(_.split("\n").toSeq)
+          val rowLength = splitRows.map(_.size).max
+          TableDiff.pivotHeaders[String](splitRows.map(row => row ++ (row.size until rowLength).map(x => "")))
+        })
+      }
+
+      val columnHeaders = extendMultiLine(flattenColumnHeaders(diffReport).map(h => h.map(valueDiffRenderer(_))))
+      val rows = extendMultiLine(flattenTableRows(diffReport).map(h => h.map(valueDiffRenderer(_))))
 
       def maxStringWidth(headers: ReportSection[String]): Seq[Int] = {
         @tailrec
@@ -52,7 +61,7 @@ object StringTableDiff {
         inner(Seq(), headers)
       }
 
-      val columnWidths = maxStringWidth(tableRows)
+      val columnWidths = maxStringWidth(columnHeaders ++ rows)
       def horizontalLine(char: Char = '-') = {
         val (l, r) = columnWidths.splitAt(report.rowWidth)
         (if (l.isEmpty) "" else l.map(i => charRepeat(char, i)).mkString("+", "-", if (r.isEmpty) "+" else "")) +
@@ -127,7 +136,7 @@ object StringTableDiff {
           l.right.map(x => addedLeft + valueRenderer(x) + addedRight).getOrElse("")
       else
         inPlaceDiff.map(_.value).mkString
-    }, r => sameLeft + r.map(_.toString).getOrElse("") + sameRight)
+    }, r => r.map(sameLeft + _.toString + sameRight).getOrElse(""))
   }
 
 

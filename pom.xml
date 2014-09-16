@@ -16,7 +16,7 @@
     </properties>
 
     <name>TableDiff</name>
-    <version>0.9.9-SNAPSHOT</version>
+    <version>0.9.9</version>
     <groupId>org.suecarter</groupId>
     <artifactId>tablediff-${scala.version}</artifactId>
     <packaging>jar</packaging>
