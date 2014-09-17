@@ -3,7 +3,7 @@ TableDiff
 
 A Scala based (but usable from Java and other JDK languages) utility for finding a diff of 2 tables, taking account of their structure. 
 
-For example. (See this in the class [org.suecarter.javatablediffexample.JavaTableDiffTest.java](htt/TableDiff/blob/master/SampleApp/src/test/java/org/suecarter/javatablediffexample/JavaTableDiffTest.java), the testDemo test)
+For example. (See this in the class [org.suecarter.javatablediffexample.JavaTableDiffTest.java](./TableDiff/blob/master/SampleApp/src/test/java/org/suecarter/javatablediffexample/JavaTableDiffTest.java), the testDemo test)
 
 ```
 Compare left table
@@ -40,9 +40,9 @@ You can render the result in HTML and have something looking like
 
 This can be useful in Jenkins, using the HTML publisher plugin to put test results in an easy to read format.
 
-If building without the zinc compile daemon, you will probably need to give mvn more permgen.
+Create jars with gradle
 ```
-export MAVEN_OPTS="-XX:MaxPermSize=512m"
+./gradlew jarAll
 ```
 
 ----

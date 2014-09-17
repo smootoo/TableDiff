@@ -109,7 +109,8 @@ object ReportContent {
   private def zipAllOption[T](left: ReportRow[T], right: ReportRow[T]) =
     left.map(Option(_)) zipAll (right.map(Option(_)), None, None)
 
-  private val isEmpty = new PartialFunction[Any, Boolean] {
+  // isEmpty is a best guess at seeing if a value is "Empty". Will delegate to isEmpty method on the object if it exists
+  protected[tablediff] val isEmpty = new PartialFunction[Any, Boolean] {
     def apply(o: Any) = {
       val trimmed = o match {
         case s: String => s.trim

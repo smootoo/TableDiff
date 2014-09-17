@@ -97,10 +97,28 @@ object StringTableDiff {
                            addedRight: String = "+}",
                            sameRight:String = "") = {
     value.fold(l => {
-      val leftString = l.left.map(valueRenderer).getOrElse("")
-      val rightString = l.right.map(valueRenderer).getOrElse("")
+      val leftString = l.left.map(x => if (isEmpty(x)) "" else valueRenderer(x)).getOrElse("")
+      val rightString = l.right.map(x => if (isEmpty(x)) "" else valueRenderer(x)).getOrElse("")
 
       val diffs = zipLongestCommonSubsequence(leftString, rightString)
+      val onlyNumericDiffs = {
+        case class NumberState(digitYet: Boolean = false,
+                               digitsAndLetters:Boolean = false,
+                               decimalPointYet: Boolean = false,
+                               onlyNumerics: Boolean = false,
+                               numericMinusYet: Boolean = false)
+        diffs.span(!_.hasANone)._2.reverse.span(!_.hasANone)._2.foldLeft(NumberState())((state, diffLoc) => {
+          val s = diffLoc.value match {
+            case _ if state.digitsAndLetters => state // never be true once digitsAndLetters is true
+            case m if m == '-' && !state.digitYet => state.copy(numericMinusYet = true, digitYet = true, onlyNumerics = true)
+            case p if p == '.' && state.decimalPointYet => state.copy(onlyNumerics = false)
+            case p if p == '.' && state.digitYet => state.copy(decimalPointYet = true)
+            case d if Character.isDigit(d) => state.copy(digitYet = true, onlyNumerics = true)
+            case _ => state.copy(digitsAndLetters = true, onlyNumerics = false)
+          }
+          s
+        }).onlyNumerics
+      }
       // little helper class to manage the complexity of the diff, default being no complexity
       case class DiffComplex(value: String = "", complex: Int = 0) {
         def prependValue(pre: Char) = this.copy(value = pre + value)
@@ -108,18 +126,16 @@ object StringTableDiff {
       def decorate(xOpt: Option[DiffLocation[Char]], yOpt: Option[DiffLocation[Char]]) = {
         val typeChange = xOpt.map(x => x.locationType) != yOpt.map(y => y.locationType)
         if (typeChange) {
-          val xDiff = xOpt match {
-            case Some(x) if x.locationType == OnlyLeft => DiffComplex(missingRight, 1)
-            case Some(x) if x.locationType == OnlyRight => DiffComplex(addedRight, 1)
-            case Some(x) if x.locationType == InBoth => DiffComplex(sameRight, 0)
-            case _ => DiffComplex()
-          }
-          val yDiff = yOpt match {
-            case Some(y) if y.locationType == OnlyLeft => DiffComplex(missingLeft, 0) // for every open there's a close
-            case Some(y) if y.locationType == OnlyRight => DiffComplex(addedLeft, 0)  // so no need to add complexity
-            case Some(x) if x.locationType == InBoth => DiffComplex(sameLeft, 0)
-            case _ => DiffComplex()
-          }
+          val xDiff = xOpt.map(_.locationType match {
+            case OnlyLeft => DiffComplex(missingRight, 1)
+            case OnlyRight => DiffComplex(addedRight, 1)
+            case InBoth => DiffComplex(sameRight, 0)
+          }).getOrElse(DiffComplex())
+          val yDiff = yOpt.map(_.locationType match {
+            case OnlyLeft => DiffComplex(missingLeft, 0) // for every open there's a close
+            case OnlyRight => DiffComplex(addedLeft, 0) // so no need to add complexity
+            case InBoth => DiffComplex(sameLeft, 0)
+          }).getOrElse(DiffComplex())
           DiffComplex(xDiff.value + yDiff.value, xDiff.complex + yDiff.complex)
         } else DiffComplex()
       }
@@ -131,9 +147,9 @@ object StringTableDiff {
           }.toList :+
           diffs.lastOption.map(tail => decorate(Some(tail), None).prependValue(tail.value)).getOrElse(DiffComplex())
       // somewhat arbitrary, but if the inplace diff is longer than a simple diff, just return the simple one
-      if (inPlaceDiff.map(_.complex).sum >= 4)
-        l.left.map(x => missingLeft + valueRenderer(x) + missingRight).getOrElse("") +
-          l.right.map(x => addedLeft + valueRenderer(x) + addedRight).getOrElse("")
+      if (onlyNumericDiffs || inPlaceDiff.map(_.complex).sum >= 4)
+        l.left.map(x => if (isEmpty(x)) "" else missingLeft + valueRenderer(x) + missingRight).getOrElse("") +
+          l.right.map(x => if (isEmpty(x)) "" else addedLeft + valueRenderer(x) + addedRight).getOrElse("")
       else
         inPlaceDiff.map(_.value).mkString
     }, r => r.map(sameLeft + _.toString + sameRight).getOrElse(""))

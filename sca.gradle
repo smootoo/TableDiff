@@ -1,0 +1,51 @@
+task wrapper(type: Wrapper) {
+  gradleVersion = '2.2.1'
+}
+
+apply plugin: "scala-base"
+
+repositories {
+  mavenCentral()
+}
+buildscript {
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  classpath 'com.github.maiflai:gradle-scalatest:0.5'
+}
+}
+
+//apply plugin: 'scalatest'
+
+sourceSets {
+  scala2_9
+  scala2_10
+//scala2_11
+}
+
+sourceSets.all { sourceSet ->
+  scala.srcDirs = ["src/main/scala"]
+  resources.srcDirs = ["src/main/resources"]
+
+  def jarTask = task(sourceSet.getTaskName(null, "jar"), type: Jar) {
+    baseName = sourceSet.name
+    from sourceSet.output
+  }
+
+  artifacts {
+    archives jarTask
+  }
+}
+
+dependencies {
+  scala2_9Compile "org.scala-lang:scala-library:2.9.3"
+  scala2_10Compile "org.scala-lang:scala-library:2.10.1"
+//scala2_11Compile "org.scala-lang:scala-library:2.11.1"
+  scala2_9Compile 'org.apache.commons:commons-lang3:3.1'
+  scala2_10Compile 'org.apache.commons:commons-lang3:3.1'
+//scala2_11Compile 'org.apache.commons:commons-lang3:3.1'
+}
+
+// vim:sw=2:ai

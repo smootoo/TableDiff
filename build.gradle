@@ -1,0 +1,164 @@
+task wrapper(type: Wrapper) {
+  gradleVersion = '2.2.1'
+}
+repositories {
+  mavenCentral()
+}
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.github.maiflai:gradle-scalatest:0.3'
+  }
+}
+
+
+ext {
+  scalaVersions = ['2_9_3', '2_10_4']
+}
+
+apply plugin: 'maven'
+apply plugin: 'signing'
+for (sv in scalaVersions) {
+  String scalaVersionTask = sv.replaceAll("_", ".")
+  def (major, minor, trivial) = scalaVersionTask.tokenize('.')
+  String baseScalaVersion = "${major}.${minor}"
+  tasks.create(name: "jar_core_${sv}", type: GradleBuild) {
+    buildFile = './build.gradle'
+    tasks = ['test', 'jar']
+    scalaVersionTask = "${scalaVersionTask}"
+    startParameter.projectProperties = [scalaVersion: "${scalaVersionTask}"]
+  }
+  tasks.create(name: "srcJar_${sv}", type: GradleBuild) {
+    buildFile = './build.gradle'
+    tasks = ['srcJar']
+    startParameter.projectProperties = [scalaVersion: "${scalaVersionTask}"]
+  }
+  tasks.create(name: "docsJar_${sv}", type: GradleBuild) {
+    buildFile = './build.gradle'
+    tasks = ['docsJar']
+    startParameter.projectProperties = [scalaVersion: "${scalaVersionTask}"]
+  }
+  tasks.create(name: "uploadCoreArchives_${sv}", type: GradleBuild) {
+    buildFile = './build.gradle'
+    tasks = ['uploadArchives']
+    startParameter.projectProperties = [scalaVersion: "${scalaVersionTask}"]
+  }
+}
+tasks.create(name: "jarAll", dependsOn: scalaVersions.collect({ 'jar_core_' + it })) {
+}
+tasks.create(name: "srcJarAll", dependsOn: scalaVersions.collect({ 'srcJar_' + it })) {
+}
+tasks.create(name: "docsJarAll", dependsOn: scalaVersions.collect({ 'docsJar_' + it })) {
+}
+tasks.create(name: "uploadArchivesAll", dependsOn: scalaVersions.collect({ 'uploadCoreArchives_' + it })) {
+}
+
+if (project.hasProperty('mavenUrl') && project.hasProperty('mavenUsername') && project.hasProperty('mavenPassword')) {
+  uploadArchives {
+    repositories {
+      signing {
+        sign configurations.archives
+// To test locally, replace mavenUrl in ~/.gradle/gradle.properties to file://localhost/tmp/myRepo/
+        mavenDeployer {
+          beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+          repository(url: "${mavenUrl}") {
+            authentication(userName: "${mavenUsername}", password: "${mavenPassword}")
+          }
+          afterEvaluate {
+            pom.artifactId = "${archivesBaseName}"
+            pom.project {
+              name 'Structural diffs'
+              packaging 'jar'
+              url 'https://github.com/smootoo/TableDiff'
+              licenses {
+                license {
+                  name 'MIT-style license'
+                  url 'http://opensource.org/licenses/MIT'
+                  distribution 'repo'
+                }
+              }
+            }
+          }
+        }
+
+      }
+    }
+  }
+}
+
+def scalaVersion = this.properties.get('scalaVersion')
+if (scalaVersion != null) {
+  println("Running with scala version ${scalaVersion}")
+  apply plugin: 'scala'
+  apply plugin: 'scalatest'
+  test {
+  }
+  jar {
+  }
+  tasks.withType(Javadoc) {
+    task srcJar(type: Jar) {
+      classifier = 'sources'
+      from sourceSets.main.java
+    }
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+      classifier 'javadoc'
+      from javadoc.destinationDir
+    }
+    task docsJar(type: Jar, dependsOn: javadocJar) {}
+    artifacts {
+      archives srcJar
+      archives javadocJar
+    }
+  }
+  tasks.withType(ScalaCompile) {
+    task srcJar(type: Jar, overwrite: true) {
+      classifier = 'sources'
+      from sourceSets.main.scala
+      from sourceSets.main.java
+    }
+//    scalaCompileOptions.useAnt = false
+//    configure(scalaCompileOptions.forkOptions) {
+//      memoryMaximumSize = '1g'
+//      jvmArgs = ['-XX:MaxPermSize=512m']
+//    }
+  }
+  tasks.withType(ScalaDoc) {
+    exclude "**/*.java" // I mix scala and java under src/main/scala
+    task scaladocJar(type: Jar) {
+      classifier = 'scaladoc'
+      from scaladoc
+    }
+    task docsJar(type: Jar, dependsOn: ['javadocJar', 'scaladocJar'], overwrite: true) {}
+    artifacts {
+      archives scaladocJar
+    }
+  }
+  archivesBaseName = "tablediff_${scalaVersion}"
+  group = 'org.suecarter'
+  version = '0.9.9.1'
+  dependencies {
+    compile "org.scala-lang:scala-library:$scalaVersion"
+    compile 'org.apache.commons:commons-lang3:3.1'
+    if (scalaVersion.startsWith('2.10')) {
+      testCompile 'org.scalatest:scalatest_2.10:2.2.2'
+    } else {
+      testCompile "org.scalatest:scalatest_$scalaVersion:2.0.M5b"
+    }
+    zinc 'com.typesafe.zinc:zinc:0.2.5'
+    testRuntime 'org.pegdown:pegdown:1.1.0'
+  }
+  configurations {
+    // manually excludes some unnecessary dependencies
+    compile.exclude module: 'javax'
+    compile.exclude module: 'jline'
+    compile.exclude module: 'jms'
+    compile.exclude module: 'jmxri'
+    compile.exclude module: 'jmxtools'
+    compile.exclude module: 'mail'
+  }
+} else {
+  println('Created tasks for each Scala environment in ' + scalaVersions)
+}
+

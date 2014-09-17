@@ -120,23 +120,23 @@ object HTMLTableDiff {
     }
   }
 
-  def toJsonTable[R, C, M](report: ReportContent[R, C, M], gridName: String = "gridData") = {
-    import org.apache.commons.lang3.StringEscapeUtils.{escapeHtml4 => escape}
-    def escapeForJson(s: String) = {
-      escape(s.replaceAll("\n","""\\\n"""))
-    }
-    // If I knew what I was doing with html, this would probably be css
-    def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
-    def valueDiffRenderer[T](value: ValueDiff[T]) =
-      StringTableDiff.valueDiffRenderer(value,
-                                        (x: T) => escapeForJson(x.toString),
-                                        htmlColour("red") + "[-</b>" + htmlColour("black"),
-                                        htmlColour("green") + "{+</b>" + htmlColour("black"),
-                                        htmlColour("black"),
-                                        "</b>" + htmlColour("red") + "-]</b>",
-                                        "</b>" + htmlColour("green") + "+}</b>",
-                                        "</b>")
+  import org.apache.commons.lang3.StringEscapeUtils.{escapeHtml4 => escape}
+  private def escapeForJson(s: String) = {
+    escape(s.replaceAll("\n","""\\\n"""))
+  }
+  // If I knew what I was doing with html, this would probably be css
+  private def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
+  protected[tablediff] def valueDiffRenderer[T](value: ValueDiff[T]) =
+    StringTableDiff.valueDiffRenderer(value,
+                                      (x: T) => escapeForJson(x.toString),
+                                      htmlColour("red") + "[-</b>" + htmlColour("black"),
+                                      htmlColour("green") + "{+</b>" + htmlColour("black"),
+                                      htmlColour("black"),
+                                      "</b>" + htmlColour("red") + "-]</b>",
+                                      "</b>" + htmlColour("green") + "+}</b>",
+                                      "</b>")
 
+  def toJsonTable[R, C, M](report: ReportContent[R, C, M], gridName: String = "gridData") = {
     def jsonRowMap[T](row: Seq[T]) = "[" + row.map(x => "\"" + (x match {
       case d: ValueDiff[T @unchecked] => valueDiffRenderer(d) //unchecked as we don't care about the type in ValueDiff
       case s => escapeForJson(x.toString)
