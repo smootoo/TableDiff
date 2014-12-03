@@ -4,15 +4,24 @@ import scala.annotation.tailrec
 import org.suecarter.tablediff.ReportContent._
 import org.suecarter.tablediff.TableDiff.ValueDiff
 
-/**
- * @param rowHeaders
- * @param columnHeaders
- * @param mainData
+/** Class to contain report content.
+  * Think of the report being broken into 4 sections
+  * {{{
+  * rowColumnHeaders| columnHeaders
+  * -------------------------------
+  * rowHeaders      | mainData
+  * }}}
+  *
+ * @param rowHeaders       bottom left section
+ * @param columnHeaders    top right section
+ * @param mainData         bottom right section
+ * @param rowColumnHeaders top left section
  * @param fillForwardBlankHeaders if repeating values in the header sections are left blank, fill forward the values
- *                                so that the produced diff has better context in header. Default true
- * @tparam R
- * @tparam C
- * @tparam M
+ *                                so that the produced diff has better context in header which drives the diff
+  *                               matching algorithm. Default true
+ * @tparam R Type of row header elements
+ * @tparam C Type of all column header elements (including rowColumn header)
+ * @tparam M Type of main data elements
  */
 case class ReportContent[+R, +C, +M](rowHeaders: ReportSection[R] = emptySection,
                                      columnHeaders: ReportSection[C] = emptySection,
@@ -36,7 +45,14 @@ case class ReportContent[+R, +C, +M](rowHeaders: ReportSection[R] = emptySection
   assertSectionIsTipTriangle(rowColumnHeaders, "Top left")
   assertSectionIsTipTriangle(columnHeaders, "Top right")
 
+  /**
+   * report is considered empty if every section has zero width and height
+   */
   def isEmpty = rowWidth == 0 && columnCount == 0 && mainDataColumnCount == 0
+
+  /**
+   * true if there is data in any of the report sections
+   */
   def nonEmpty = !isEmpty
 
   /**
@@ -74,6 +90,10 @@ case class ReportContent[+R, +C, +M](rowHeaders: ReportSection[R] = emptySection
    */
   def mainDataColumnCount = (0 +: mainData.map(_.size)).max
 
+  /**
+   * Utility to apply function to every element in this report
+   * @return A new transformed report
+   */
   def mapAllCells[T >: Any, S](mapFunction: (T) => S) = {
     ReportContent[S, S, S](rowHeaders = rowHeaders.map(_.map(mapFunction)),
       columnHeaders = columnHeaders.map(_.map(mapFunction)),
@@ -81,6 +101,10 @@ case class ReportContent[+R, +C, +M](rowHeaders: ReportSection[R] = emptySection
       rowColumnHeaders = rowColumnHeaders.map(_.map(mapFunction)))
   }
 
+  /**
+   * check to see if this report is equivalent to right report
+   * @return true if all sections are equal.
+   */
   def isEquivalent(rightReport: ReportContent[_,_,_]) = {
     ((rowWidth == 0 && rightReport.rowWidth == 0) || (rowHeaders == rightReport.rowHeaders && rowColumnHeaders == rightReport.rowColumnHeaders)) &&
     ((columnCount == 0 && rightReport.columnCount == 0) || columnHeaders == rightReport.columnHeaders) &&
@@ -91,10 +115,16 @@ case class ReportContent[+R, +C, +M](rowHeaders: ReportSection[R] = emptySection
 object ReportContent {
   type ReportSection[+T] = ReportRow[ReportRow[T]]
   type ReportRow[+T] = Seq[T]
-  def emptyReport[T] = ReportContent[T, T, T]()
-  def emptySection[T] = Seq[T]()
-  def emptyRow[T] = Seq[T]()
+  /**
+   * Construct empty report
+   */
+  protected[tablediff] def emptyReport[T] = ReportContent[T, T, T]()
+  protected[tablediff] def emptyRow[T] = Seq[T]()
+  protected[tablediff] def emptySection[T] = Seq[T]()
 
+  /**
+   * Construct report from Array of Array
+   */
   def apply[T](content: Array[Array[T]], rowWidth: Int, colDepth: Int) = {
     val (top, bottom) = content.map(_.toSeq).toSeq.splitAt(colDepth)
     val (topLeft, topRight) = top.map(_.splitAt(rowWidth)).unzip
@@ -102,9 +132,11 @@ object ReportContent {
     new ReportContent[T, T, T](bottomLeft, topRight, bottomRight, topLeft)
   }
 
-  def fillSectionHeaders[T](section: ReportSection[T]) = rowsProcessForward(section, fillRow[T])
+  protected[tablediff] def fillSectionHeaders[T](section: ReportSection[T]) =
+    rowsProcessForward(section, fillRow[T])
 
-  def removeHeaderDuplicates[T](section: ReportSection[ValueDiff[T]]) = rowsProcessForward[ValueDiff[T]](section, removeRowDuplicates[T])
+  protected[tablediff] def removeHeaderDuplicates[T](section: ReportSection[ValueDiff[T]]) =
+    rowsProcessForward[ValueDiff[T]](section, removeRowDuplicates[T])
 
   private def zipAllOption[T](left: ReportRow[T], right: ReportRow[T]) =
     left.map(Option(_)) zipAll (right.map(Option(_)), None, None)

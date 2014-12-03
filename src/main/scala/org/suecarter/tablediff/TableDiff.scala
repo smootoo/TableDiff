@@ -6,17 +6,26 @@ import scala.util.Properties
 
 /**
  * Value differs on side to the other. None means the value is missing on that side
- * @param left
- * @param right
- * @tparam T
+ * @param left Optional value on left of diff
+ * @param right Optional value on right of diff
  */
 case class EitherSide[T](left: Option[T], right: Option[T])
 
-sealed trait DiffLocationType
-object OnlyLeft extends DiffLocationType
-object OnlyRight extends DiffLocationType
-object InBoth extends DiffLocationType
-case class DiffLocation[T](value: T, iLeft: Option[Int], iRight: Option[Int]) {
+/**
+ * Enumeration of the types of Diffs, only left, only right or both
+ */
+protected[tablediff] sealed trait DiffLocationType
+protected[tablediff] case object OnlyLeft extends DiffLocationType
+protected[tablediff] case object OnlyRight extends DiffLocationType
+protected[tablediff] case object InBoth extends DiffLocationType
+
+/**
+ * Represents a diff and where it optionally sits on the right and left side
+ * @param value actual value
+ * @param iLeft optional index into left sequence
+ * @param iRight optional index into right sequence
+ */
+protected[tablediff] case class DiffLocation[T](value: T, iLeft: Option[Int], iRight: Option[Int]) {
   require(iLeft.isDefined || iRight.isDefined, "At least one of iLeft or iRight must have a value")
   def hasANone = locationType match {
     case OnlyLeft | OnlyRight => true
@@ -32,10 +41,13 @@ case class DiffLocation[T](value: T, iLeft: Option[Int], iRight: Option[Int]) {
       OnlyLeft
 }
 
+/**
+ * Functions to produce and handle diff reports
+ */
 object TableDiff {
   /**
-   * Represents a value that could be a diff. Left is a diff. Right is not a diff, but is an option
-   * @tparam T
+   * Represents a value that could be a diff. Left is a diff. Right is not a diff, but is an option which is None
+   * if there is no value
    */
   type ValueDiff[T] = Either[EitherSide[T], Option[T]]
 
@@ -85,12 +97,10 @@ object TableDiff {
 
   /**
    * flatten row, column, main table structure to a single section
-   * @param report
    * @tparam T return ReportSection type T is the type that is a supertype of R,C,M
    * @tparam R row header ValueDiff type
    * @tparam C column header ValueDiff type
    * @tparam M main data header ValueDiff type
-   * @return
    */
   def flattenDiffReport[T, R <: T, C <: T, M <: T](report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]): ReportSection[ValueDiff[T]] = {
     val columnHeaders = flattenColumnHeaders(report)
@@ -101,7 +111,7 @@ object TableDiff {
 
   /**
    *
-   * @param diffReport
+   * @param diffReport a report containing diffs
    * @tparam R Row header type
    * @tparam C Column header type
    * @tparam M Main data type
@@ -130,12 +140,12 @@ object TableDiff {
   protected def defaultMainValueComparison[T] = (l: Option[T], r: Option[T]) => l == r
   /**
    * Produce a report that is the diff of the left and right report
-   * @param leftReport
-   * @param rightReport
+   * @param mainValueComparison override the comparison function to see if two elements are the same
+   *                            default is ==
    * @tparam R Row header type
    * @tparam C Column header type
    * @tparam M Main data type
-   * @return
+   * @return report containing a representation of any diffs
    */
   def produceReportDiff[R, C, M](leftReport: ReportContent[R, C, M],
                                  rightReport: ReportContent[R, C, M],
@@ -377,10 +387,6 @@ object TableDiff {
           DiffLocation(right.head._1, None, Some(right.head._2)) +: rHeadless
     }
     zlcs(leftSeq.zipWithIndex, rightSeq.zipWithIndex)
-  }
-
-  def main(args: Array[String]) {
-    zipLongestCommonSubsequence("Hello Bye".map(_ + ""), "xHell Bxet".map(_ + "")).foreach(println)
   }
 }
 

@@ -3,16 +3,11 @@ package org.suecarter.tablediff
 import ReportContent._
 import java.io._
 
+/**
+ * Functions to produce html representation on table and tables containing diffs
+ */
 object HTMLTableDiff {
-
   import TableDiff._
-  class ClassExtract[T] { def unapply(a:Any):Option[T] = Some(a.asInstanceOf[T]) }
-
-  object MapStrAny extends ClassExtract[Map[String, Any]]
-  object ReportSectionString extends ClassExtract[ReportSection[String]]
-  object TableValueDiffs extends ClassExtract[ReportContent[ValueDiff[Any],ValueDiff[Any],ValueDiff[Any]]]
-  object ValueDiff extends ClassExtract[ValueDiff[_]]
-
   private def readStringFromFile(filename: String) = {
     val buffer = new StringBuffer
     val inputStream = new InputStreamReader(new FileInputStream(filename))
@@ -30,22 +25,15 @@ object HTMLTableDiff {
     writer.close
   }
 
-  private def extractJSON(htmlString: String) = """(?s)var gridData = .*};""".r.findFirstIn(htmlString).map(_.replace("var gridData = ", "").replace("};", "}"))
+  private def extractJSON(htmlString: String) =
+    """(?s)var gridData = .*};""".r.findFirstIn(htmlString).map(_.replace("var gridData = ", "").replace("};", "}"))
 
-  def diffFiles(leftFilename: String, rightFilename: String ) =
-    onlyTheDiffs(produceReportDiff(fromJsonTable(extractJSON(readStringFromFile(leftFilename)).getOrElse("")),
-            fromJsonTable(extractJSON(readStringFromFile(rightFilename)).getOrElse(""))))
-
-  def writeHTMLFile(reportName: String, directory: File, jsonString: String) {
-    val report = fromJsonTable(jsonString)
-    writeHTMLFile(reportName, directory, report)
-  }
-
+  /**
+   * Write a file containing an html representaion of the report
+   * @param extraHeader Extra text to add into the html page
+   */
   def writeHTMLFile[R, C, M](reportName: String, directory: File, report: ReportContent[R, C, M], extraHeader: Option[String] = None) {
-    val tableString = report match {
-      case TableValueDiffs(diffReport) => toHTMLString(diffReport, reportName, extraHeader)
-      case _ => toHTMLString(report, reportName, extraHeader)
-    }
+    val tableString = toHTMLString(report, reportName, extraHeader)
     writeStringToFile(directory.getCanonicalPath + "/" + reportNameToLink(reportName), tableString)
     val jsFile = new File(directory, "/Grid.js")
     if (!jsFile.exists)
@@ -56,8 +44,14 @@ object HTMLTableDiff {
   }
 
   private def reportNameToLink(name: String) = "./" + name + ".html"
+
+  /**
+   * Write a file containing an html representation of the report and a linked page just containing
+   * any diffs. The report has to be one containing Diffs.
+   */
   def writeHTMLDiffAndContext[R, C, M](reportName: String,
-                                       directory: File, report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]) {
+                                       directory: File,
+                                       report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]) {
     val fullName = "FullContext_" + reportName
     val onlyReportDiffs = onlyTheDiffs(report)
     writeHTMLFile(reportName, directory, onlyReportDiffs,
@@ -74,7 +68,7 @@ object HTMLTableDiff {
 
   private def footerFixedCols(report: ReportContent[_,_,_]) =
     if (report.columnCount == 0 && report.mainDataColumnCount == 0) 0 else report.rowWidth
-  def toHTMLString[R, C, M](report: ReportContent[R, C, M],
+  protected[tablediff] def toHTMLString[R, C, M](report: ReportContent[R, C, M],
                             name: String,
                             extraHeader: Option[String] = None) = {
     htmlHeader(name, extraHeader.getOrElse("") + (if(report.isEmpty) " This report is empty" else "")) +
@@ -85,6 +79,16 @@ object HTMLTableDiff {
   // scala.util.parsing.json.JSON not thread safe
   import scala.util.parsing.json.JSON
   private object jsonParseLock
+
+  // Helpers for extracting the json
+  private class ClassExtract[T] { def unapply(a:Any):Option[T] = Some(a.asInstanceOf[T]) }
+
+  private object MapStrAny extends ClassExtract[Map[String, Any]]
+  private object ReportSectionString extends ClassExtract[ReportSection[String]]
+  /**
+   * Extract a report from a json representation held in the passed in String
+   * @return A ReportContent instance with all the elements of type String
+   */
   def fromJsonTable(tableString: String) = {
     val jsonString = extractJSON(tableString).getOrElse("")
     val jsonMap = jsonParseLock.synchronized {
@@ -126,6 +130,10 @@ object HTMLTableDiff {
   }
   // If I knew what I was doing with html, this would probably be css
   private def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
+
+  /**
+   * take a diff value and render it in html
+   */
   protected[tablediff] def valueDiffRenderer[T](value: ValueDiff[T]) =
     StringTableDiff.valueDiffRenderer(value,
                                       (x: T) => escapeForJson(x.toString),
@@ -136,6 +144,10 @@ object HTMLTableDiff {
                                       "</b>" + htmlColour("green") + "+}</b>",
                                       "</b>")
 
+  /**
+   * take a report and produce a json representation
+   * @return A string representation of the json for the report
+   */
   def toJsonTable[R, C, M](report: ReportContent[R, C, M], gridName: String = "gridData") = {
     def jsonRowMap[T](row: Seq[T]) = "[" + row.map(x => "\"" + (x match {
       case d: ValueDiff[T @unchecked] => valueDiffRenderer(d) //unchecked as we don't care about the type in ValueDiff
@@ -153,7 +165,7 @@ object HTMLTableDiff {
     "var " + gridName + " = {" + List(headerString, bodyString, "\"FixedCols\" : " + report.rowWidth).mkString(",\n") + "};"
   }
 
-  def htmlHeader(name: String, extraHeader: String = "") =
+  private def htmlHeader(name: String, extraHeader: String = "") =
     """
       <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
 "http://www.w3.org/TR/html4/strict.dtd">
@@ -239,7 +251,7 @@ lastColumnIndex)
           }
                     """.replace("\r", "").stripMargin
 
-  def htmlFooter(fixedColumns: Int = 1) =
+  private def htmlFooter(fixedColumns: Int = 1) =
     """
     var testGrid = new Grid("testGrid", {
     srcType : "json",
@@ -264,7 +276,7 @@ lastColumnIndex)
 
     """.stripMargin
 
-  val cssText = """
+  private val cssText = """
                   |/*
                   | Grid
                   | MIT-style license. Copyright 2012 Matt V. Murphy
@@ -450,7 +462,7 @@ lastColumnIndex)
                   |    .g_BodyFixed2 { margin-top : 0px !important; }
                   |}
                 """.stripMargin
-  val gridJS =
+  private val gridJS =
     """
       |////////////////////////////////////
       |//

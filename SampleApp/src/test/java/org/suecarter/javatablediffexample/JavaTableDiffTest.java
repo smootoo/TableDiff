@@ -77,7 +77,7 @@ public class JavaTableDiffTest {
         String diffs = StringTableDiff.diffReportToString(diffReport);
         System.out.println("Produces these diffs\n" + diffs);
         assertEquals(diffs,
-                       "+----+----------------------------------+\n" +
+                        "+----+----------------------------------+\n" +
                         "|    |col1         |col2|{+col2.5+}|col3|\n" +
                         "+----+----------------------------------+\n" +
                         "|row1|m1,[-1-]{+x+}|m2,1|{+m2.5,1+}|m3,1|\n" +
