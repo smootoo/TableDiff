@@ -15,7 +15,7 @@ buildscript {
 
 def groupId = 'org.suecarter'
 def artifactName = 'tablediff'
-def versionId = '1.0-SNAPSHOT'
+def versionId = '1.0'
 def githubLocation = 'smootoo/TableDiff'
 
 ext {
