@@ -20,7 +20,7 @@ def githubLocation = 'smootoo/TableDiff'
 
 ext {
   // only need to build one version for each major scala release
-  scalaVersions = ['2_9_3', '2_10_4']
+  scalaVersions = ['2_9_3', '2_10_4', '2_11_4']
 }
 
 apply plugin: 'maven'
@@ -161,14 +161,19 @@ if (scalaVersion != null) {
     }
   }
   def (major, minor, trivial) = scalaVersion.tokenize('.')
-  archivesBaseName = "tablediff_${major}.${minor}"
+  def minorInt = Integer.parseInt(minor)
+  def shortScalaVersion = "${major}.${minor}"
+  archivesBaseName = "tablediff_${shortScalaVersion}"
   group = groupId
   version = versionId
   dependencies {
     compile "org.scala-lang:scala-library:$scalaVersion"
+    if (minorInt >= 11) {
+      compile "org.scala-lang.modules:scala-parser-combinators_$shortScalaVersion:1.0.2"
+    }
     compile 'org.apache.commons:commons-lang3:3.1'
-    if (scalaVersion.startsWith('2.10')) {
-      testCompile 'org.scalatest:scalatest_2.10:2.2.2'
+    if (minorInt >= 10) {
+      testCompile "org.scalatest:scalatest_${shortScalaVersion}:2.2.2"
     } else {
       testCompile "org.scalatest:scalatest_$scalaVersion:2.0.M5b"
     }

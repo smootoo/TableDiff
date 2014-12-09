@@ -3,7 +3,9 @@ TableDiff
 
 A Scala based (but usable from Java and other JDK languages) utility for finding a diff of 2 tables, taking account of their structure. 
 
-For example. (See this in the class [org.suecarter.javatablediffexample.JavaTableDiffTest.java](./SampleApp/src/test/java/org/suecarter/javatablediffexample/JavaTableDiffTest.java), the testDemo test)
+Available on [maven central](http://search.maven.org/#artifactdetails|org.suecarter|tablediff_2.11|1.0|jar)
+ 
+For usage example in java. (See this in the class [org.suecarter.javatablediffexample.JavaTableDiffTest.java](./SampleApp/src/test/java/org/suecarter/javatablediffexample/JavaTableDiffTest.java), the testDemo test)
 
 ```
 Compare left table

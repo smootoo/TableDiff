@@ -1,4 +1,5 @@
-sort out javadoc and scaladoc
+Link to scalaxchenge talk
+Use new json parser
 use new html rendering library
 html rendering when main section is missing
 prettier colours on html diff tables
