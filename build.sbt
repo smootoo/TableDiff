@@ -12,11 +12,15 @@ version := "1.0.1-SNAPSHOT"
 //resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "org.apache.commons" % "commons-lang3" % "3.1",
-  "org.scalatest"     %% "scalatest"     % {if (scalaVersion.value.startsWith("2.9.")) "2.0.M5b" else "2.2.3"} % "test"
+  "org.apache.commons" % "commons-lang3"   % "3.1",
+  "org.scalatest"     %% "scalatest"       % {if (scalaVersion.value.startsWith("2.9.")) "2.0.M5b" else "2.2.3"} % "test",
+  "com.novocode"       % "junit-interface" % "0.11" % Test
 ) ++ {if (scalaVersion.value.startsWith("2.11.")) {
   Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3")
 } else Nil}
+
+// Want to keep testing the SampleApp and this ups the Java integration coverage
+unmanagedSourceDirectories in Test += baseDirectory.value / "SampleApp/src/test/java"
 
 scalacOptions in Compile ++= Seq(
   "-encoding", "UTF-8", "-target:jvm-1.6", "-feature", "-deprecation",
@@ -25,7 +29,7 @@ scalacOptions in Compile ++= Seq(
 )
 
 javacOptions in (Compile, compile) ++= Seq (
-  "-source", "1.6", "-target", "1.6", "-Xlint:all", "-Werror"
+  "-source", "1.6", "-target", "1.6"//, "-Xlint:all", "-Werror"
 )
 
 javacOptions in doc ++= Seq("-source", "1.6")

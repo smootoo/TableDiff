@@ -96,20 +96,6 @@ object TableDiff {
   }
 
   /**
-   * flatten row, column, main table structure to a single section
-   * @tparam T return ReportSection type T is the type that is a supertype of R,C,M
-   * @tparam R row header ValueDiff type
-   * @tparam C column header ValueDiff type
-   * @tparam M main data header ValueDiff type
-   */
-  def flattenDiffReport[T, R <: T, C <: T, M <: T](report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]): ReportSection[ValueDiff[T]] = {
-    val columnHeaders = flattenColumnHeaders(report)
-    val rows = flattenTableRows(report)
-    // asInstanceOfs are needed as the compiler can't work it out, but it is safe as R,C,M <: T
-    columnHeaders.map(_.asInstanceOf[ReportRow[ValueDiff[T]]]) ++ rows.map(_.asInstanceOf[ReportRow[ValueDiff[T]]])
-  }
-
-  /**
    *
    * @param diffReport a report containing diffs
    * @tparam R Row header type

@@ -158,11 +158,8 @@ object ReportContent {
     }
 
     def isDefinedAt(o: Any) = try {
-      o match {
-        case a: AnyRef => a.getClass.getMethod("isEmpty")
-          true
-        case _ => false
-      }
+      o.getClass.getMethod("isEmpty")
+      true
     } catch {
       case _: Throwable => false
     }

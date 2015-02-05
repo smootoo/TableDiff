@@ -8,17 +8,6 @@ import java.io._
  */
 object HTMLTableDiff {
   import TableDiff._
-  private def readStringFromFile(filename: String) = {
-    val buffer = new StringBuffer
-    val inputStream = new InputStreamReader(new FileInputStream(filename))
-    val tmp = new Array[Char](4096)
-    while (inputStream.ready) {
-      val read: Int = inputStream.read(tmp)
-      buffer.append(tmp, 0, read)
-    }
-    inputStream.close
-    buffer.toString
-  }
   private def writeStringToFile(filename: String, text: String) {
     val writer = new OutputStreamWriter(new FileOutputStream(filename))
     writer.write(text)
