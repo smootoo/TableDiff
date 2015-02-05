@@ -24,6 +24,7 @@ public class JTableDiff {
      * @param table2 Right table
      * @return ReportContent containing diffs
      */
+    @SuppressWarnings("unchecked")
     static public ReportContent produceReportDiff(ReportContent table1, ReportContent table2) {
         return TableDiff$.MODULE$.produceReportDiff(table1, table2, TableDiff$.MODULE$.defaultMainValueComparison());
     }

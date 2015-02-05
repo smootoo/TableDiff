@@ -1,0 +1,25 @@
+language: scala
+jdk:
+  - openjdk6
+scala:
+# scoverage can't be disabled for scala-2.9
+# https://github.com/scoverage/sbt-scoverage/issues/85
+# - 2.9.2
+# - 2.9.3
+  - 2.10.4
+  - 2.11.5
+sudo: false
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION clean test doc && sbt ++$TRAVIS_SCALA_VERSION clean coverage test
+after_success:
+  - sbt ++$TRAVIS_SCALA_VERSION coveralls
+  - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
+env:
+  global:
+    # travis encrypt -r smootoo/TableDiff SONATYPE_USERNAME=<USERNAME>
+    # travis encrypt -r smootoo/TableDiff SONATYPE_PASSWORD=<PASSWORD>
+    #- secure: ???
+    #- secure: ???
