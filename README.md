@@ -45,10 +45,6 @@ You can render the result in HTML and have something looking like
 
 This can be useful in Jenkins, using the HTML publisher plugin to put test results in an easy to read format.
 
-Create jars with gradle
-```
-./gradlew jarAll
-```
 
 ----
 
