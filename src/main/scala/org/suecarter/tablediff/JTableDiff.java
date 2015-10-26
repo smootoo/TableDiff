@@ -26,6 +26,6 @@ public class JTableDiff {
      */
     @SuppressWarnings("unchecked")
     static public ReportContent produceReportDiff(ReportContent table1, ReportContent table2) {
-        return TableDiff$.MODULE$.produceReportDiff(table1, table2, TableDiff$.MODULE$.defaultMainValueComparison());
+        return TableDiff$.MODULE$.produceReportDiff(table1, table2, TableDiff$.MODULE$.defaultMainValueComparison(),TableDiff$.MODULE$.diffChunkSize());
     }
 }
