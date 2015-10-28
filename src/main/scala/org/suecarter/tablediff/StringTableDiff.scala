@@ -80,7 +80,7 @@ object StringTableDiff {
         horizontalLine('-') + "\n" + columnHeaders.map(resizeRowCells).mkString("", "\n", "\n")
       else "") +
         horizontalLine('-') + "\n" +
-        (if (!rows.isEmpty) {
+        (if (rows.nonEmpty) {
           rows.map(resizeRowCells).mkString("", "\n", "\n") +
             horizontalLine('-') + "\n"
         } else "")
@@ -95,24 +95,28 @@ object StringTableDiff {
                            sameLeft:String = "",
                            missingRight: String = "-]",
                            addedRight: String = "+}",
-                           sameRight:String = "") = {
+                           sameRight:String = "",
+                           chunkSize: Option[Int] = None,
+                           complexityThreshold: Int = 4) = {
     value.fold(l => {
       val leftString = l.left.map(x => if (isEmpty(x)) "" else valueRenderer(x)).getOrElse("")
       val rightString = l.right.map(x => if (isEmpty(x)) "" else valueRenderer(x)).getOrElse("")
 
-      val diffs = zipLongestCommonSubsequence(leftString, rightString)
+      val diffs = chunkSize.map(c => zipLongestCommonSubsequence(leftString, rightString, c)).
+        getOrElse(zipLongestCommonSubsequence(leftString, rightString))
       val onlyNumericDiffs = {
         case class NumberState(digitYet: Boolean = false,
                                digitsAndLetters:Boolean = false,
                                decimalPointYet: Boolean = false,
                                onlyNumerics: Boolean = false,
                                numericMinusYet: Boolean = false)
-        diffs.span(!_.hasANone)._2.reverse.span(!_.hasANone)._2.foldLeft(NumberState())((state, diffLoc) => {
+        val diffElements = diffs.span(!_.hasANone)._2.reverse.span(!_.hasANone)._2
+        diffElements.foldLeft(NumberState())((state, diffLoc) => {
           val s = diffLoc.value match {
             case _ if state.digitsAndLetters => state // never be true once digitsAndLetters is true
             case m if m == '-' && !state.digitYet => state.copy(numericMinusYet = true, digitYet = true, onlyNumerics = true)
             case p if p == '.' && state.decimalPointYet => state.copy(onlyNumerics = false)
-            case p if p == '.' && state.digitYet => state.copy(decimalPointYet = true)
+            case p if p == '.' => state.copy(decimalPointYet = true)
             case d if Character.isDigit(d) => state.copy(digitYet = true, onlyNumerics = true)
             case _ => state.copy(digitsAndLetters = true, onlyNumerics = false)
           }
@@ -147,7 +151,7 @@ object StringTableDiff {
           }.toList :+
           diffs.lastOption.map(tail => decorate(Some(tail), None).prependValue(tail.value)).getOrElse(DiffComplex())
       // somewhat arbitrary, but if the inplace diff is longer than a simple diff, just return the simple one
-      if (onlyNumericDiffs || inPlaceDiff.map(_.complex).sum >= 4)
+      if (onlyNumericDiffs || inPlaceDiff.map(_.complex).sum >= complexityThreshold)
         l.left.map(x => if (isEmpty(x)) "" else missingLeft + valueRenderer(x) + missingRight).getOrElse("") +
           l.right.map(x => if (isEmpty(x)) "" else addedLeft + valueRenderer(x) + addedRight).getOrElse("")
       else

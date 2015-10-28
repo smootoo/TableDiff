@@ -1,6 +1,7 @@
 package org.suecarter.tablediff
 
 import org.scalatest.FunSuite
+import scala.util.Properties
 import scala.{List => L}
 import ReportContent._
 import TableDiffUtilTests.diffed
@@ -252,8 +253,11 @@ class TableDiffUtilTests extends FunSuite {
 //        println(diffReportToString(onlyDiffs))
         assert(onlyDiffs === d)
     }
-
-
+  }
+  test("read chunk env var") {
+    assert(TableDiff.readChunkEnvVar() == TableDiff.diffChunkSize)
+    println(s"testing invalid ${TableDiff.chunkEnvVarName}")
+    assert(TableDiff.readChunkEnvVar(Some("xxx")) == TableDiff.diffChunkSize)
   }
 }
 

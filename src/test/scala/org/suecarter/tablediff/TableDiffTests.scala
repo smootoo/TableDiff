@@ -164,6 +164,37 @@ class TableDiffTests extends FunSuite {
     }
   }
 
+  test("Chunking sequence diffs") {
+    val cases: List[(String, String, String, Seq[String])] =
+      L(
+        ("case 1", "a", "b", Seq("[-a-]{+b+}"))
+        , ("case 2", "a", "a", Seq("a"))
+        , ("case 3", "ab", "a", Seq("a[-b-]"))
+        , ("case 4", "abd", "acd", Seq("a[-b-]{+c+}d"))
+        , ("case 5", "ad", "df", Seq("[-a-]d{+f+}"))
+        , ("case 6", "abd", "def", Seq("[-a-]{+d+}[-b-]{+e+}[-d-]{+f+}", "[-ab-]{+de+}[-d-]{+f+}", "[-ab-]d{+ef+}"))
+        , ("case 7", "abdef", "def", Seq("[-a-]{+d+}[-b-]{+e+}[-de-]f", "[-ab-]def"))
+        , ("case 8", "abdef", "ababdef", Seq("ab[-d-]{+a+}[-e-]{+bde+}f", "ab[-de-]{+abde+}f", "ab{+ab+}def"))
+        , ("case 9", "abcdefgh", "adefgh", Seq("a[-b-]{+d+}[-c-]{+e+}[-d-]{+f+}[-e-]{+g+}[-fg-]h", "a[-bc-]defgh"))
+        , ("case 10", "abcdefgh", "abxxcdefgh", Seq("ab[-c-]{+x+}[-d-]{+x+}[-e-]{+c+}[-f-]{+d+}[-g-]{+efg+}h",
+                                                    "ab[-cd-]{+xx+}[-ef-]{+cdef+}gh",
+                                                    "ab{+xx+}cdefgh"))
+      )
+
+    cases.foreach {
+      case (description, left, right, expectedDiffs) =>
+        List(1, 2, 5, 100).zipWithIndex.foreach{case(chunkSize, i) => {
+          val stringRep = StringTableDiff.valueDiffRenderer(E(left, right),
+                                                            chunkSize = Some(chunkSize),
+                                                            complexityThreshold = Int.MaxValue)
+          val expectedDiff = if (i >= expectedDiffs.size) expectedDiffs.last else expectedDiffs(i)
+          //println(s"$description $chunkSize $stringRep")
+          assert(stringRep === expectedDiff, s"DiffStrings $description chunk size $chunkSize\n" +
+            s" $left $right\nGot $stringRep expected $expectedDiff")
+        }}
+    }
+  }
+
   implicit def eitherTuple2(t: (Any, Any)): Left[EitherSide[Any], Nothing] = Left(EitherSide(Some(t._1), Some(t._2)))
 
   test("diff reports") {
@@ -326,6 +357,74 @@ class TableDiffTests extends FunSuite {
             "Expected Only Diffs\n" + StringTableDiff.diffReportToString(j) +
               "Actual Only Diffs\n" + StringTableDiff.diffReportToString(just))
         })
+    }
+  }
+
+  test("chunking diff reports") {
+    val cases = L(
+    // Tuple3(left report, right report, List(difference reports for increasing chunk size))
+      (ReportContent(Array("No","0","1","2").map(Array(_)), 1,1),
+        ReportContent(Array("No","1","2").map(Array(_)), 1,1), List(
+        """+-----+
+          ||No   |
+          |+-----+
+          ||[-0-]|
+          ||1    |
+          ||2    |
+          |+-----+
+          |""".stripMargin
+      )),
+      (ReportContent(Array("No","0","1","2", "5").map(Array(_)), 1,1),
+        ReportContent(Array("No","1","2", "3", "4", "5").map(Array(_)), 1,1), List(
+        """+-----+
+          ||No   |
+          |+-----+
+          ||[-0-]|
+          ||1    |
+          ||2    |
+          ||{+3+}|
+          ||{+4+}|
+          ||5    |
+          |+-----+
+          |""".stripMargin,
+        """+-----+
+          ||No   |
+          |+-----+
+          ||[-0-]|
+          ||1    |
+          ||{+2+}|
+          ||{+3+}|
+          ||{+4+}|
+          ||[-2-]|
+          ||5    |
+          |+-----+
+          |""".stripMargin,
+        """+-----+
+          ||No   |
+          |+-----+
+          ||[-0-]|
+          ||1    |
+          ||2    |
+          ||{+3+}|
+          ||{+4+}|
+          ||5    |
+          |+-----+
+          |""".stripMargin
+      ))
+    )
+    cases.foreach {
+      case (l, r, diffReports) =>
+        List(1,2,5,100).zipWithIndex.foreach {case(chunkSize, i) =>
+          val diffReport = produceReportDiff(l, r, chunkSize = chunkSize)
+//          println(StringTableDiff.diffReportToString(l))
+//          println(StringTableDiff.diffReportToString(r))
+          val expectedDiff = if (i >= diffReports.size) diffReports.last else diffReports(i)
+          val diffReportString = StringTableDiff.diffReportToString(diffReport)
+//          println(diffReportString)
+          assert(diffReportString === expectedDiff,
+            "Expected \n" + expectedDiff +
+              "Actual \n" + diffReportString)
+        }
     }
   }
 

@@ -135,7 +135,8 @@ object TableDiff {
    */
   def produceReportDiff[R, C, M](leftReport: ReportContent[R, C, M],
                                  rightReport: ReportContent[R, C, M],
-                                 mainValueComparison: (Option[M], Option[M]) => Boolean = defaultMainValueComparison)
+                                 mainValueComparison: (Option[M], Option[M]) => Boolean = defaultMainValueComparison,
+                                 chunkSize: Int = diffChunkSize)
   : ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]] = {
     // get the value from the main data corresponding to this row and column indexes
     def mainValue(rowIndex: Option[Int], colIndex: Option[Int], report: ReportContent[R, C, M]): Option[M] =
@@ -155,10 +156,15 @@ object TableDiff {
     }
     // this logic tries to collapse headers diff back to a single ValueDiff if the mainData matches
     // (i.e. only the headerValue is a diff). Will only search "one" row down for match
-    def collapseHeaders[T](headerRows: ReportRow[DiffLocation[T]], leftMainData: ReportSection[M], rightMainData: ReportSection[M])
+    def collapseHeaders[T](headerRows: ReportRow[DiffLocation[T]],
+                           leftMainData: ReportSection[M],
+                           rightMainData: ReportSection[M])
     : ReportRow[DiffLocation[ValueDiff[T]]] = {
       @tailrec
-      def inner[S](accumulator: ReportRow[DiffLocation[ValueDiff[S]]], headerRows: ReportRow[DiffLocation[S]], leftMainData: ReportSection[M], rightMainData: ReportSection[M])
+      def inner[S](accumulator: ReportRow[DiffLocation[ValueDiff[S]]],
+                   headerRows: ReportRow[DiffLocation[S]],
+                   leftMainData: ReportSection[M],
+                   rightMainData: ReportSection[M])
       : ReportRow[DiffLocation[ValueDiff[S]]] = {
         if (headerRows.isEmpty)
           accumulator
@@ -167,14 +173,15 @@ object TableDiff {
             case Seq(dlLeft@DiffLocation(leftValue, Some(leftI), None), tail@_*) => {
               // find row with just a left value
               val matchingRightValue: Option[(DiffLocation[TableDiff.ValueDiff[S]], ReportRow[DiffLocation[S]])] = tail.collectFirst {
+                // try to match to row with just a right value
                 case dlRight@DiffLocation(rightValue, None, Some(rightI)) => {
-                  // try to match to row with just a right value
                   val leftI = dlLeft.iLeft.getOrElse(0)
                   val rightI = dlRight.iRight.getOrElse(0)
-                  if ((leftMainData.size == 0 && rightMainData.size == 0) // either main data is empty
+                  if (((leftMainData.isEmpty && rightMainData.isEmpty) // either main data is empty
                     || ((leftMainData.size >= leftI + 1) && // or indexes point to same elements, 1 row away
                     (rightMainData.size >= rightI + 1) &&
                     leftMainData(leftI) == rightMainData(rightI)))
+                    &&  rightI == accumulator.flatMap(_.iRight).reduceOption(_ max _).getOrElse(-1)+1)
                     (DiffLocation(Left(EitherSide(Some(dlLeft.value), Some(dlRight.value))), Some(leftI), Some(rightI)),
                       tail.filterNot(_ == dlRight))
                   else
@@ -209,7 +216,8 @@ object TableDiff {
         if (rightReport.fillForwardBlankHeaders)
           fillSectionHeaders(pivotHeaders(rightSection))
         else
-          pivotHeaders(rightSection))
+          pivotHeaders(rightSection),
+        chunkSize = chunkSize)
     }
     val resultCols = zipLCSColumnSection(leftReport.columnHeaders, rightReport.columnHeaders)
     val resultRowColHeaders = zipLCSColumnSection(leftReport.rowColumnHeaders, rightReport.rowColumnHeaders)
@@ -220,9 +228,10 @@ object TableDiff {
     }
     val leftRowHeaders = flattenRowHeaderSection(leftReport)
     val rightRowHeaders = flattenRowHeaderSection(rightReport)
-        val resultRows = zipLongestCommonSubsequence(
+    val resultRows = zipLongestCommonSubsequence(
       if (leftReport.fillForwardBlankHeaders) fillSectionHeaders(leftRowHeaders) else leftRowHeaders,
-      if (rightReport.fillForwardBlankHeaders) fillSectionHeaders(rightRowHeaders) else rightRowHeaders)
+      if (rightReport.fillForwardBlankHeaders) fillSectionHeaders(rightRowHeaders) else rightRowHeaders,
+      chunkSize = chunkSize)
 
     // process row and column headers in context of MainData section
     val rows: ReportRow[DiffLocation[ValueDiff[ReportRow[R]]]] =
@@ -253,7 +262,8 @@ object TableDiff {
       columnHeaders = pivotHeaders(fillSectionHeaders(pivotHeaders(report.columnHeaders))))
 
   protected[tablediff] def zipLongestCommonSubsequence[T](fullLeftSeq: ReportRow[T],
-                                                          fullRightSeq: ReportRow[T]): ReportRow[DiffLocation[T]] = {
+                                                          fullRightSeq: ReportRow[T],
+                                                          chunkSize: Int = diffChunkSize): ReportRow[DiffLocation[T]] = {
     def zipLCSChunk(leftOffset: Int,
                     rightOffset: Int,
                     leftSeq: ReportRow[T],
@@ -311,23 +321,43 @@ object TableDiff {
           val (rightChunk, rightRemain) = nextRightSeq.splitAt(chunkSize)
           val chunkDiffs = zipLCSChunk(leftOffSet, rightOffSet, leftChunk, rightChunk)
           val anyMatches = chunkDiffs.foldLeft(false)((matched, diffLoc) => matched || diffLoc.locationType == InBoth)
+          // See if the edges of 2 chunks can simply be stiched back together
+          def stichChunks(leftChunk: ReportRow[DiffLocation[T]], rightChunk: ReportRow[DiffLocation[T]]): ReportRow[DiffLocation[T]] = {
+            val stiched = for {
+              rightDirection <- rightChunk.headOption.filter(_.hasANone).map(_.locationType)
+              possibleStichRight = rightChunk.takeWhile(d => rightDirection == d.locationType)
+              stichSize <- if (possibleStichRight.nonEmpty) Some(possibleStichRight.size) else None
+              possibleStichLeft = leftChunk.takeRight(stichSize).takeWhile(_.locationType ==
+                (if (rightDirection == OnlyLeft) OnlyRight else OnlyLeft)
+              )
+              possibleStich = possibleStichLeft.zip(possibleStichRight)
+                       if possibleStichLeft.size == stichSize && possibleStich.forall{case (l,r) => l.value == r.value}
+            } yield {
+                leftChunk.dropRight(stichSize) ++
+                  possibleStich.map { case (l, r) => DiffLocation(l.value,
+                                                                  l.iLeft orElse r.iLeft,
+                                                                  l.iRight orElse r.iRight)
+                  } ++ rightChunk.drop(stichSize)
+              }
+            stiched.getOrElse(leftChunk ++ rightChunk)
+          }
           // If we haven't found any matches and the remains are empty on one side, then keep the small side to match on
           // if not, move onto the next chunks
           if (!anyMatches && leftRemain.isEmpty && rightRemain.nonEmpty)
             checkHeads(leftOffSet,
                        rightOffSet + rightChunk.size,
-                       acc ++ chunkDiffs.filter(_.locationType == OnlyRight),
+                       stichChunks(acc, chunkDiffs.filter(_.locationType == OnlyRight)),
                        leftChunk,
                        rightRemain)
           else if (!anyMatches && leftRemain.nonEmpty && rightRemain.isEmpty)
             checkHeads(leftOffSet + leftChunk.size,
                        rightOffSet,
-                       acc ++ chunkDiffs.filter(_.locationType == OnlyLeft),
+                       stichChunks(acc, chunkDiffs.filter(_.locationType == OnlyLeft)),
                        leftRemain,
                        rightChunk)
           else checkHeads(leftOffSet + leftChunk.size,
                           rightOffSet + rightChunk.size,
-                          acc ++ chunkDiffs,
+                          stichChunks(acc, chunkDiffs),
                           leftRemain,
                           rightRemain)
 
@@ -338,10 +368,19 @@ object TableDiff {
   }
 
   private val defaultChunkSize = 1000
-  protected lazy val chunkSize =  try {
-    Properties.envOrElse("TABLEDIFFCHUNKSIZE", defaultChunkSize.toString).toInt
-  } catch {
-    case x: NumberFormatException => defaultChunkSize
+  protected[tablediff] lazy val diffChunkSize = readChunkEnvVar()
+  val chunkEnvVarName = "TABLEDIFFCHUNKSIZE"
+  protected[tablediff] def readChunkEnvVar(envOverride: Option[String] = None) = {
+    val chunkEnvVar = envOverride.getOrElse(Properties.envOrElse(chunkEnvVarName, defaultChunkSize.toString))
+    try {
+      chunkEnvVar.toInt
+    } catch {
+      case x: NumberFormatException => {
+        System.err.println(s"Unable to set diff chunk size $chunkEnvVarName=$chunkEnvVar ${x.getMessage}")
+        System.err.println(s"Using defaultChunkSize $defaultChunkSize")
+        defaultChunkSize
+      }
+    }
   }
 
   private case class Memoise[A, B](f: A => B) extends (A => B) {
