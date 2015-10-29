@@ -5,9 +5,9 @@ organization := "org.suecarter"
 
 name := "tablediff"
 
-scalaVersion := "2.11.5"
+crossScalaVersions := Seq("2.11.7", "2.10.5")
 
-version := "1.0.1-SNAPSHOT"
+version := "1.0.1"
 
 //resolvers += Resolver.sonatypeRepo("snapshots")
 
