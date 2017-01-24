@@ -1,13 +1,14 @@
 language: scala
 jdk:
-  - openjdk6
+  - oraclejdk8
 scala:
 # scoverage can't be disabled for scala-2.9
 # https://github.com/scoverage/sbt-scoverage/issues/85
 # - 2.9.2
 # - 2.9.3
-  - 2.10.4
-  - 2.11.5
+  - 2.10.6
+  - 2.11.8
+  - 2.12.1
 sudo: false
 cache:
   directories:
