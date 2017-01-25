@@ -1,22 +1,21 @@
 import sbt._
-import ScoverageSbtPlugin.ScoverageKeys._
 
 organization := "org.suecarter"
 
 name := "tablediff"
 
-crossScalaVersions := Seq("2.11.7", "2.10.5")
+crossScalaVersions := Seq("2.12.1", "2.11.8", "2.10.6")
 
-version := "1.0.1"
+version := "1.0.2"
 
 //resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3"   % "3.1",
-  "org.scalatest"     %% "scalatest"       % {if (scalaVersion.value.startsWith("2.9.")) "2.0.M5b" else "2.2.3"} % "test",
+  "org.scalatest"     %% "scalatest"       % {if (scalaVersion.value.startsWith("2.9.")) "2.0.M5b" else "3.0.1"} % "test",
   "com.novocode"       % "junit-interface" % "0.11" % Test
-) ++ {if (scalaVersion.value.startsWith("2.11.")) {
-  Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3")
+) ++ {if (scalaVersion.value.startsWith("2.11.") || scalaVersion.value.startsWith("2.12.")) {
+  Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5")
 } else Nil}
 
 // Want to keep testing the SampleApp and this ups the Java integration coverage
