@@ -1,8 +1,8 @@
 package org.suecarter.tablediff
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
-class DiffRendererTests extends FunSuite {
+class DiffRendererTests extends AnyFunSuite {
   test("rendering of diff values") {
     val cases = List(
       ("146", "142", "[-146-]{+142+}"),
@@ -31,13 +31,23 @@ class DiffRendererTests extends FunSuite {
     val exampleSections = cases.map {
       case (l, r, v) =>
         //println(StringTableDiff.diffReportToString(l))
-        val diffValue = Left(EitherSide(Some(l),Some(r)))
+        val diffValue = Left(EitherSide(Some(l), Some(r)))
         val result = StringTableDiff.valueDiffRenderer(diffValue)
-        assert(result === v,
-          "In-place does not match. Left " + l + " Right " + r + " Expected " + v + " but got " + result)
+        assert(
+          result === v,
+          "In-place does not match. Left " + l + " Right " + r + " Expected " + v + " but got " + result
+        )
         (Seq(D(l), D(r)), Seq(D(HTMLTableDiff.valueDiffRenderer(diffValue))))
     }
-    HTMLTableDiff.writeHTMLFile("RendererExamples", HTMLTableDiffTests.tmpDir,
-    ReportContent(exampleSections.map(_._1), Seq(Seq(D("RenderedDiff"))), exampleSections.map(_._2), Seq(Seq(D("Left"),D("Right")))))
+    HTMLTableDiff.writeHTMLFile(
+      "RendererExamples",
+      HTMLTableDiffTests.tmpDir,
+      ReportContent(
+        exampleSections.map(_._1),
+        Seq(Seq(D("RenderedDiff"))),
+        exampleSections.map(_._2),
+        Seq(Seq(D("Left"), D("Right")))
+      )
+    )
   }
 }
