@@ -1,6 +1,6 @@
 package org.suecarter.tablediff
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import org.suecarter.tablediff.TableDiff._
 import scala.io.Source
 import java.io.File
@@ -15,7 +15,7 @@ object HTMLTableDiffTests {
   }
 }
 
-class HTMLTableDiffTests extends FunSuite {
+class HTMLTableDiffTests extends AnyFunSuite {
   import HTMLTableDiffTests._
   test("diff html reports") {
     val cases = List(
@@ -38,14 +38,16 @@ class HTMLTableDiffTests extends FunSuite {
         assert(bounce2Report === leftReport)
         val sourceRight = Source.fromURL(getClass.getResource("/" + r), "latin1")
         val rightReport = fromJsonTable(sourceRight.getLines().mkString(" "))
-        val diffReport: ReportContent[ValueDiff[String], ValueDiff[String], ValueDiff[String]] = produceReportDiff(leftReport, rightReport)
-    //    println(StringTableDiff.diffReportToString(diffReport))
-        def emptyCheck(reportName: String, report: ReportContent[_,_,_]) = reportName.contains("empty") || !report.isEmpty
+        val diffReport: ReportContent[ValueDiff[String], ValueDiff[String], ValueDiff[String]] =
+          produceReportDiff(leftReport, rightReport)
+        //    println(StringTableDiff.diffReportToString(diffReport))
+        def emptyCheck(reportName: String, report: ReportContent[_, _, _]) =
+          reportName.contains("empty") || !report.isEmpty
         assert(emptyCheck(l, leftReport))
         assert(emptyCheck(r, rightReport))
-        assert(emptyCheck(l+r, diffReport))
-//        println(StringTableDiff.diffReportToString(TableDiff.onlyTheDiffs(diffReport)))
-      HTMLTableDiff.writeHTMLDiffAndContext(l+index, tmpDir, diffReport)
+        assert(emptyCheck(l + r, diffReport))
+        //        println(StringTableDiff.diffReportToString(TableDiff.onlyTheDiffs(diffReport)))
+        HTMLTableDiff.writeHTMLDiffAndContext(l + index, tmpDir, diffReport)
     }
   }
   test("escape strings") {
@@ -53,21 +55,21 @@ class HTMLTableDiffTests extends FunSuite {
     import scala.{List => L}
     val report = ReportContent(
       L(L("a", "\"<test>&b</test>\""), L("b", "d")),
-      L(L("Col1", "Col2", "Col3"),
-        L("one", "two", "three")),
-      L(L(7, 5, 2),
-        L(33, 1, 34)),
-      L(L("AHead",
-        """BHead
-          |2Line""".stripMargin), L("","")))
+      L(L("Col1", "Col2", "Col3"), L("one", "two", "three")),
+      L(L(7, 5, 2), L(33, 1, 34)),
+      L(L("AHead", """BHead
+          |2Line""".stripMargin), L("", ""))
+    )
     val bounceReport = fromJsonTable(toJsonTable(report))
     assert(bounceReport.toString === report.toString)
     HTMLTableDiff.writeHTMLFile("sue", tmpDir, report)
   }
   test("render odd shaped reports") {
     import TableDiffTestCases._
-    assert(diffReportToString(fromJsonTable(toJsonTable(unexpectedShapedReport))) ===
-      diffReportToString(unexpectedShapedReport))
+    assert(
+      diffReportToString(fromJsonTable(toJsonTable(unexpectedShapedReport))) ===
+        diffReportToString(unexpectedShapedReport)
+    )
   }
   test("render simple tables") {
     import StringTableDiffTests._
@@ -81,12 +83,14 @@ class HTMLTableDiffTests extends FunSuite {
         val a = toJsonTable(startReport)
         val bounceReport = fromJsonTable(toJsonTable(startReport))
         val diffReport = produceReportDiff(startReport, bounceReport)
-//        println("Diff is \n" + StringTableDiff.diffReportToString(diffReport))
+        //        println("Diff is \n" + StringTableDiff.diffReportToString(diffReport))
         val onlyDiffs = onlyTheDiffs(diffReport)
-//        println("OnlyDiffs is \n" + StringTableDiff.diffReportToString(onlyDiffs))
-        assert(onlyDiffs.isEmpty,
+        //        println("OnlyDiffs is \n" + StringTableDiff.diffReportToString(onlyDiffs))
+        assert(
+          onlyDiffs.isEmpty,
           "Before\n" + StringTableDiff.diffReportToString(startReport) +
-          "After\n" + StringTableDiff.diffReportToString(bounceReport))
+            "After\n" + StringTableDiff.diffReportToString(bounceReport)
+        )
     }
 
   }

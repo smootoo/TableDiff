@@ -1,14 +1,9 @@
 language: scala
 jdk:
-  - oraclejdk8
+  - openjdk11
 scala:
-# scoverage can't be disabled for scala-2.9
-# https://github.com/scoverage/sbt-scoverage/issues/85
-# - 2.9.2
-# - 2.9.3
-  - 2.10.6
-  - 2.11.8
-  - 2.12.1
+  - 2.12.12
+  - 2.13.3
 sudo: false
 cache:
   directories:
@@ -18,9 +13,3 @@ script:
 after_success:
   - sbt ++$TRAVIS_SCALA_VERSION coveralls
   - sbt ++$TRAVIS_SCALA_VERSION clean $(if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then echo "publish"; fi)
-env:
-  global:
-    # travis encrypt -r smootoo/TableDiff SONATYPE_USERNAME=<USERNAME>
-    # travis encrypt -r smootoo/TableDiff SONATYPE_PASSWORD=<PASSWORD>
-    #- secure: ???
-    #- secure: ???

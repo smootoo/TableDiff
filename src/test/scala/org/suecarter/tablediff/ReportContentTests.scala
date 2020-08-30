@@ -1,12 +1,12 @@
 package org.suecarter.tablediff
 
-import org.scalatest.FunSuite
+import org.scalatest.funsuite.AnyFunSuite
 import org.suecarter.tablediff.ReportContent._
 import scala.{List => L}
 
-class ReportContentTests extends FunSuite {
+class ReportContentTests extends AnyFunSuite {
   test("Check ReportContent validation") {
-    val dodgySectionShape = L(L(1),L(1,2))
+    val dodgySectionShape = L(L(1), L(1, 2))
     intercept[AssertionError] {
       emptyReport.copy(columnHeaders = dodgySectionShape)
     }
@@ -28,6 +28,6 @@ class ReportContentTests extends FunSuite {
     assert(isEmpty(Left(None)) === false)
     assert(isEmpty(List()))
     assert(isEmpty(List(1)) === false)
-    assert(isEmpty(1l) === false)
+    assert(isEmpty(1L) === false)
   }
 }

@@ -4,8 +4,8 @@ import ReportContent._
 import java.io._
 
 /**
- * Functions to produce html representation on table and tables containing diffs
- */
+  * Functions to produce html representation on table and tables containing diffs
+  */
 object HTMLTableDiff {
   import TableDiff._
   private def writeStringToFile(filename: String, text: String) {
@@ -18,10 +18,15 @@ object HTMLTableDiff {
     """(?s)var gridData = .*};""".r.findFirstIn(htmlString).map(_.replace("var gridData = ", "").replace("};", "}"))
 
   /**
-   * Write a file containing an html representaion of the report
-   * @param extraHeader Extra text to add into the html page
-   */
-  def writeHTMLFile[R, C, M](reportName: String, directory: File, report: ReportContent[R, C, M], extraHeader: Option[String] = None) {
+    * Write a file containing an html representaion of the report
+    * @param extraHeader Extra text to add into the html page
+    */
+  def writeHTMLFile[R, C, M](
+      reportName: String,
+      directory: File,
+      report: ReportContent[R, C, M],
+      extraHeader: Option[String] = None
+  ) {
     val tableString = toHTMLString(report, reportName, extraHeader)
     writeStringToFile(directory.getCanonicalPath + "/" + reportNameToLink(reportName), tableString)
     val jsFile = new File(directory, "/Grid.js")
@@ -35,49 +40,63 @@ object HTMLTableDiff {
   private def reportNameToLink(name: String) = "./" + name + ".html"
 
   /**
-   * Write a file containing an html representation of the report and a linked page just containing
-   * any diffs. The report has to be one containing Diffs.
-   */
-  def writeHTMLDiffAndContext[R, C, M](reportName: String,
-                                       directory: File,
-                                       report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]) {
+    * Write a file containing an html representation of the report and a linked page just containing
+    * any diffs. The report has to be one containing Diffs.
+    */
+  def writeHTMLDiffAndContext[R, C, M](
+      reportName: String,
+      directory: File,
+      report: ReportContent[ValueDiff[R], ValueDiff[C], ValueDiff[M]]
+  ) {
     val fullName = "FullContext_" + reportName
     val onlyReportDiffs = onlyTheDiffs(report)
-    writeHTMLFile(reportName, directory, onlyReportDiffs,
-      Some("""<br>""" +
-        (if (onlyReportDiffs.nonEmpty && onlyReportDiffs == report)
-          "The report is full of diffs. The full report is the same as the diff report"
-        else {
-          writeHTMLFile(fullName, directory, report,
-            Some("""<br><a href=""""+ reportNameToLink(reportName) + """">Go back to just the diffs</a>"""))
-          "Viewing just the diffs." +
-          """ <a href=""""+ reportNameToLink(fullName) + """">See the full report</a>"""
-        })))
+    writeHTMLFile(
+      reportName,
+      directory,
+      onlyReportDiffs,
+      Some(
+        """<br>""" +
+          (if (onlyReportDiffs.nonEmpty && onlyReportDiffs == report)
+             "The report is full of diffs. The full report is the same as the diff report"
+           else {
+             writeHTMLFile(
+               fullName,
+               directory,
+               report,
+               Some("""<br><a href="""" + reportNameToLink(reportName) + """">Go back to just the diffs</a>""")
+             )
+             "Viewing just the diffs." +
+               """ <a href="""" + reportNameToLink(fullName) + """">See the full report</a>"""
+           })
+      )
+    )
   }
 
-  private def footerFixedCols(report: ReportContent[_,_,_]) =
+  private def footerFixedCols(report: ReportContent[_, _, _]) =
     if (report.columnCount == 0 && report.mainDataColumnCount == 0) 0 else report.rowWidth
-  protected[tablediff] def toHTMLString[R, C, M](report: ReportContent[R, C, M],
-                            name: String,
-                            extraHeader: Option[String] = None) = {
-    htmlHeader(name, extraHeader.getOrElse("") + (if(report.isEmpty) " This report is empty" else "")) +
+  protected[tablediff] def toHTMLString[R, C, M](
+      report: ReportContent[R, C, M],
+      name: String,
+      extraHeader: Option[String] = None
+  ) =
+    htmlHeader(name, extraHeader.getOrElse("") + (if (report.isEmpty) " This report is empty" else "")) +
       toJsonTable(report) +
       htmlFooter(footerFixedCols(report))
-  }
 
   // scala.util.parsing.json.JSON not thread safe
   import scala.util.parsing.json.JSON
   private object jsonParseLock
 
   // Helpers for extracting the json
-  private class ClassExtract[T] { def unapply(a:Any):Option[T] = Some(a.asInstanceOf[T]) }
+  private class ClassExtract[T] { def unapply(a: Any): Option[T] = Some(a.asInstanceOf[T]) }
 
   private object MapStrAny extends ClassExtract[Map[String, Any]]
   private object ReportSectionString extends ClassExtract[ReportSection[String]]
+
   /**
-   * Extract a report from a json representation held in the passed in String
-   * @return A ReportContent instance with all the elements of type String
-   */
+    * Extract a report from a json representation held in the passed in String
+    * @return A ReportContent instance with all the elements of type String
+    */
   def fromJsonTable(tableString: String) = {
     val jsonString = extractJSON(tableString).getOrElse("")
     val jsonMap = jsonParseLock.synchronized {
@@ -86,26 +105,32 @@ object HTMLTableDiff {
     jsonMap match {
       case Some(MapStrAny(j)) => {
         import org.apache.commons.lang3.StringEscapeUtils.{unescapeHtml4 => unescape}
-        def unescapeFromJson(s: String) = {
-          unescape(s.replaceAll("""\n""","\n"))
-        }
+        def unescapeFromJson(s: String) =
+          unescape(s.replaceAll("""\n""", "\n"))
         val rowWidth = j.getOrElse("FixedCols", 2.0) match {
           case x: Double => x.toInt
         }
-        val headerSection = j.get("Head").map {
-          case ReportSectionString(x) => x
-        }.getOrElse(Seq())
-        val (rowColumnHeaders, columnHeaders) = headerSection.foldLeft((Seq[Seq[String]](), Seq[Seq[String]]()))((headers, row) => {
+        val headerSection = j
+          .get("Head")
+          .map {
+            case ReportSectionString(x) => x
+          }
+          .getOrElse(Seq())
+        val (rowColumnHeaders, columnHeaders) = headerSection.foldLeft((Seq[Seq[String]](), Seq[Seq[String]]())) {
+          (headers, row) =>
+            val (rowHead, mainBit) = row.splitAt(rowWidth)
+            (headers._1 ++ Seq(rowHead), headers._2 ++ Seq(mainBit))
+        }
+        val main = j
+          .get("Body")
+          .map {
+            case ReportSectionString(x) => x
+          }
+          .getOrElse(Seq())
+        val (rows, mainData) = main.foldLeft((Seq[Seq[String]](), Seq[Seq[String]]())) { (headers, row) =>
           val (rowHead, mainBit) = row.splitAt(rowWidth)
           (headers._1 ++ Seq(rowHead), headers._2 ++ Seq(mainBit))
-        })
-        val main = j.get("Body").map {
-          case ReportSectionString(x) => x
-        }.getOrElse(Seq())
-        val (rows, mainData) = main.foldLeft((Seq[Seq[String]](), Seq[Seq[String]]()))((headers, row) => {
-          val (rowHead, mainBit) = row.splitAt(rowWidth)
-          (headers._1 ++ Seq(rowHead), headers._2 ++ Seq(mainBit))
-        })
+        }
         val escapeMe = (cell: Any) => unescapeFromJson(cell.toString)
         ReportContent(rows, columnHeaders, mainData, rowColumnHeaders).mapAllCells(escapeMe)
       }
@@ -114,44 +139,60 @@ object HTMLTableDiff {
   }
 
   import org.apache.commons.lang3.StringEscapeUtils.{escapeHtml4 => escape}
-  private def escapeForJson(s: String) = {
-    escape(s.replaceAll("\n","""\\\n"""))
-  }
+  private def escapeForJson(s: String) =
+    escape(s.replaceAll("\n", """\\\n"""))
   // If I knew what I was doing with html, this would probably be css
   private def htmlColour(colour: String) = "<b style=\\\"color:" + colour + ";\\\">"
 
   /**
-   * take a diff value and render it in html
-   */
+    * take a diff value and render it in html
+    */
   protected[tablediff] def valueDiffRenderer[T](value: ValueDiff[T]) =
-    StringTableDiff.valueDiffRenderer(value,
-                                      (x: T) => escapeForJson(x.toString),
-                                      htmlColour("red") + "[-</b>" + htmlColour("black"),
-                                      htmlColour("green") + "{+</b>" + htmlColour("black"),
-                                      htmlColour("black"),
-                                      "</b>" + htmlColour("red") + "-]</b>",
-                                      "</b>" + htmlColour("green") + "+}</b>",
-                                      "</b>")
+    StringTableDiff.valueDiffRenderer(
+      value,
+      (x: T) => escapeForJson(x.toString),
+      htmlColour("red") + "[-</b>" + htmlColour("black"),
+      htmlColour("green") + "{+</b>" + htmlColour("black"),
+      htmlColour("black"),
+      "</b>" + htmlColour("red") + "-]</b>",
+      "</b>" + htmlColour("green") + "+}</b>",
+      "</b>"
+    )
 
   /**
-   * take a report and produce a json representation
-   * @return A string representation of the json for the report
-   */
+    * take a report and produce a json representation
+    * @return A string representation of the json for the report
+    */
   def toJsonTable[R, C, M](report: ReportContent[R, C, M], gridName: String = "gridData") = {
-    def jsonRowMap[T](row: Seq[T]) = "[" + row.map(x => "\"" + (x match {
-      case d: ValueDiff[T @unchecked] => valueDiffRenderer(d) //unchecked as we don't care about the type in ValueDiff
-      case s => escapeForJson(x.toString)
-    }) + "\"").mkString(",") + "]"
+    def jsonRowMap[T](row: Seq[T]) =
+      "[" + row
+        .map(x =>
+          "\"" + (x match {
+            case d: ValueDiff[T @unchecked] =>
+              valueDiffRenderer(d) //unchecked as we don't care about the type in ValueDiff
+            case s => escapeForJson(x.toString)
+          }) + "\""
+        )
+        .mkString(",") + "]"
     def bodyMap[T](name: String, body: Seq[T]) = name + " : [\n" + body.mkString(",\n") + "]\n"
 
     def emptyCells(i: Int) = (0 until i).map(x => Right(None))
-    val headerString = bodyMap("\"Head\"",
-      for ((rowHeader, columnHeader) <- report.rowColumnHeaders zipAll(report.columnHeaders, Seq(), Seq()))
-      yield jsonRowMap(rowHeader ++ emptyCells(report.rowWidth - rowHeader.size) ++ columnHeader ++ emptyCells(report.columnCount - columnHeader.size)))
-    val bodyString = bodyMap("\"Body\"",
-      for ((row, data) <- report.rowHeaders zipAll(report.mainData, Seq(), Seq()))
-      yield jsonRowMap(row ++ emptyCells(report.rowWidth - row.size) ++ data))
-    "var " + gridName + " = {" + List(headerString, bodyString, "\"FixedCols\" : " + report.rowWidth).mkString(",\n") + "};"
+    val headerString = bodyMap(
+      "\"Head\"",
+      for ((rowHeader, columnHeader) <- report.rowColumnHeaders zipAll (report.columnHeaders, Seq(), Seq()))
+        yield jsonRowMap(
+          rowHeader ++ emptyCells(report.rowWidth - rowHeader.size) ++ columnHeader ++ emptyCells(
+            report.columnCount - columnHeader.size
+          )
+        )
+    )
+    val bodyString = bodyMap(
+      "\"Body\"",
+      for ((row, data) <- report.rowHeaders zipAll (report.mainData, Seq(), Seq()))
+        yield jsonRowMap(row ++ emptyCells(report.rowWidth - row.size) ++ data)
+    )
+    "var " + gridName + " = {" + List(headerString, bodyString, "\"FixedCols\" : " + report.rowWidth)
+      .mkString(",\n") + "};"
   }
 
   private def htmlHeader(name: String, extraHeader: String = "") =
