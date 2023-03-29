@@ -28,7 +28,7 @@ class DiffRendererTests extends AnyFunSuite {
       ("", None, "")
     )
     import TableDiffTestCases._
-    val exampleSections = cases.map {
+    cases.foreach {
       case (l, r, v) =>
         //println(StringTableDiff.diffReportToString(l))
         val diffValue = Left(EitherSide(Some(l), Some(r)))
@@ -37,17 +37,6 @@ class DiffRendererTests extends AnyFunSuite {
           result === v,
           "In-place does not match. Left " + l + " Right " + r + " Expected " + v + " but got " + result
         )
-        (Seq(D(l), D(r)), Seq(D(HTMLTableDiff.valueDiffRenderer(diffValue))))
     }
-    HTMLTableDiff.writeHTMLFile(
-      "RendererExamples",
-      HTMLTableDiffTests.tmpDir,
-      ReportContent(
-        exampleSections.map(_._1),
-        Seq(Seq(D("RenderedDiff"))),
-        exampleSections.map(_._2),
-        Seq(Seq(D("Left"), D("Right")))
-      )
-    )
   }
 }

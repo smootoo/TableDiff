@@ -39,7 +39,7 @@ case class ReportContent[+R, +C, +M](
   // ***
   // ***
   // *
-  private def assertSectionIsTipTriangle[T](section: ReportSection[T], sectionName: String) {
+  private def assertSectionIsTipTriangle[T](section: ReportSection[T], sectionName: String) = {
     assert(
       section.sliding(2).collect { case Seq(l, r) => l.size >= r.size }.forall(x => x),
       sectionName + " section needs to have same or decreasing number of elements in each row\n" +

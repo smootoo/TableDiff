@@ -9,9 +9,9 @@ import org.suecarter.tablediff.TableDiff.ValueDiff
 
 class TableDiffUtilTests extends AnyFunSuite {
   test("forward filling header sections") {
-    implicit def stringToReportSection(s: String): ReportSection[String] =
-      s.stripMargin('^').split("\n").map(x => x.toCharArray.toSeq.map(_.toString))
-    val cases: List[(ReportSection[Any], ReportSection[Any])] = List(
+    def stringToReportSection(s: String): ReportSection[String] =
+      s.stripMargin('^').split("\n").toSeq.map(x => x.toSeq.map(_.toString))
+    val cases: List[(ReportSection[String], ReportSection[String])] = List(
       ("""
 ^ab
 ^ c
@@ -71,7 +71,7 @@ class TableDiffUtilTests extends AnyFunSuite {
 ^rstuv
 ^q
 ^qx
-"""),
+""")).map(x => (stringToReportSection(x._1), stringToReportSection(x._2))) ++ L(
       (L(L("a", "b"), L("")), L(L("a", "b"), L("a", "b"))),
       (L(L("a", "b"), L()), L(L("a", "b"), L("a", "b"))),
       (L(L()), L(L())),
@@ -294,13 +294,14 @@ object TableDiffUtilTests {
       mainData = x.mainData.map(_.map(diffCell)),
       rowColumnHeaders = x.rowColumnHeaders.map(_.map(diffCell))
     )
+  import scala.language.implicitConversions
   implicit def stringToReport(s: String): ReportContent[String, String, String] = {
     def barSplit(rows: Seq[String]) =
       rows.filterNot(_.isEmpty).foldLeft((Seq[Seq[String]](), Seq[Seq[String]]())) { (total, s) =>
         val (l, r) = s.span(!_.equals('|'))
         (total._1 :+ l.map(_.toString), total._2 :+ r.headOption.map(x => r.tail.map(_.toString)).getOrElse(Seq()))
       }
-    val (headers, below) = s.stripMargin('^').split("\n").span(!_.contains("-"))
+    val (headers, below) = s.stripMargin('^').split("\n").toSeq.span(!_.contains("-"))
     val (rowColumnHeaders, columnHeaders) = barSplit(headers)
     val (rowHeaders, main) = below.headOption.map(x => below.tail).map(rows => barSplit(rows)).getOrElse((Seq(), Seq()))
     ReportContent(rowHeaders, columnHeaders, main, rowColumnHeaders) //.map(_.map(_.toString))

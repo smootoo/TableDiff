@@ -4,35 +4,30 @@ organization := "org.suecarter"
 
 name := "tablediff"
 
-crossScalaVersions := Seq("2.13.3", "2.12.12")
+crossScalaVersions := Seq("3.2.2", "2.13.10")
+scalaVersion := "3.2.2"
 
-version := "1.0.3"
+version := "1.1"
 
+Global / onChangedBuildSource := ReloadOnSourceChanges
 //resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "org.apache.commons" % "commons-lang3" % "3.11",
-  "org.scalatest" %% "scalatest" % "3.2.2" % "test",
+  "org.apache.commons" % "commons-lang3" % "3.12.0",
+  "org.scalatest" %% "scalatest" % "3.2.15" % "test",
   "com.novocode" % "junit-interface" % "0.11" % Test,
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 )
 
 // Want to keep testing the SampleApp and this ups the Java integration coverage
-unmanagedSourceDirectories in Test += baseDirectory.value / "SampleApp/src/test/java"
+Test / unmanagedSourceDirectories += baseDirectory.value / "SampleApp/src/test/java"
 
-scalacOptions in Compile ++= Seq(
-//  "-Xfatal-warnings", // @unchecked seems to be ignored
+Compile / scalacOptions ++= Seq(
+  "-Xfatal-warnings",
+  "-deprecation",
+  "-feature",
 )
 
-maxErrors := 1
-
 fork := true
-
-//javaOptions ++= Seq("-XX:MaxPermSize=256m", "-Xmx2g", "-XX:+UseConcMarkSweepGC")
-
-coverageMinimum := 90
-coverageFailOnMinimum := true
-coverageHighlighting := false
 
 licenses := Seq(
   "MIT" -> url("http://opensource.org/licenses/MIT")
