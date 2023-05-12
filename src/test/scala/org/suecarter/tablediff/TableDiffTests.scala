@@ -141,7 +141,7 @@ class TableDiffTests extends AnyFunSuite {
       ) ++ {
         // Testing large sparse diffs
         val i = 3000 // testing for big sequences to make sure the lcs algo can handle them
-        def xs(x: Char) = Stream.continually(x).take(i).toList
+        def xs(x: Char) = LazyList.continually(x).take(i).toList
         def xLeftDiffs(x: Char, offset: Int = 0) = xs(x).zipWithIndex.map { case (dx, ix) => DL(dx, S(ix + offset), n) }
         def xRightDiffs(x: Char, offset: Int = 0) = xs(x).zipWithIndex.map {
           case (dx, ix) => DL(dx, n, S(ix + offset))
@@ -250,6 +250,7 @@ class TableDiffTests extends AnyFunSuite {
     }
   }
 
+  import scala.language.implicitConversions
   implicit def eitherTuple2(t: (Any, Any)): Left[EitherSide[Any], Nothing] = Left(EitherSide(Some(t._1), Some(t._2)))
 
   test("diff reports") {
@@ -561,7 +562,7 @@ class TableDiffTests extends AnyFunSuite {
         leftReport: ReportContent[_, _, _],
         rightReport: ReportContent[_, _, _],
         expectedDiff: ReportContent[_, _, _]
-    ) {
+    ) = {
       val diffReport = produceReportDiff(leftReport, rightReport)
       assert(
         diffReport.isEquivalent(expectedDiff),

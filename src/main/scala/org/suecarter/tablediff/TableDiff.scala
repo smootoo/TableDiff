@@ -343,7 +343,7 @@ object TableDiff {
         if (row == 0 && col == 0)
           accumulate
         else {
-          val (nextDiff: DiffLocation[T], nextRow: Int, nextCol: Int) =
+          val (nextDiff, nextRow, nextCol) =
             if (row > 0 && col > 0 && leftSeq(row - 1) == rightSeq(col - 1)) {
               (
                 DiffLocation(leftSeq(row - 1), Some(row - 1 + leftOffset), Some(col - 1 + rightOffset)),
@@ -352,7 +352,7 @@ object TableDiff {
               )
             } else if (col > 0 && (row == 0 || seqLengths(row)(col - 1) >= seqLengths(row - 1)(col))) {
               (DiffLocation(rightSeq(col - 1), None, Some(col - 1 + rightOffset)), row, col - 1)
-            } else if (row > 0 && (col == 0 || seqLengths(row)(col - 1) < seqLengths(row - 1)(col))) {
+            } else {
               (DiffLocation(leftSeq(row - 1), Some(row - 1 + leftOffset), None), row - 1, col)
             }
           diffWalk(nextDiff +: accumulate, nextRow, nextCol)

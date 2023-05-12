@@ -18,11 +18,11 @@ object StringTableDiff {
     } else {
       // take a report section and turn it into a ReportSection with all entries being ValueDiffs
       // the flatten fns take ValueDiff ReportSections
-      def valueDiffise[T](reportSection: ReportSection[T]): ReportSection[ValueDiff[Any]] =
+      def valueDiffise[T](reportSection: ReportSection[T]): ReportSection[ValueDiff[T]] =
         reportSection.map(_.map { x =>
-          val diffValue: ValueDiff[Any] = x match {
-            case diff: ValueDiff[Any @unchecked] => diff //unchecked as we don't care about the type in ValueDiff
-            case value                           => Right(Some(value))
+          val diffValue = x match {
+            case diff: ValueDiff[T] @unchecked => diff
+            case value                         => Right(Some(value))
           }
           diffValue
         })
@@ -132,7 +132,7 @@ object StringTableDiff {
         }
         // little helper class to manage the complexity of the diff, default being no complexity
         case class DiffComplex(value: String = "", complex: Int = 0) {
-          def prependValue(pre: Char) = this.copy(value = pre + value)
+          def prependValue(pre: Char) = this.copy(value = s"${pre}${value}")
         }
         def decorate(xOpt: Option[DiffLocation[Char]], yOpt: Option[DiffLocation[Char]]) = {
           val typeChange = xOpt.map(x => x.locationType) != yOpt.map(y => y.locationType)

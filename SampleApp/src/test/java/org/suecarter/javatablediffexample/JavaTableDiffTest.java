@@ -83,8 +83,5 @@ public class JavaTableDiffTest {
                         "|row1|m1,[-1-]{+x+}|m2,1|{+m2.5,1+}|m3,1|\n" +
                         "|row2|m1,2         |m2,2|{+m2.5,2+}|m3,2|\n" +
                         "+----+----------------------------------+\n");
-        File dir = new File(System.getProperty("java.io.tmpdir") + File.separatorChar + "TableDiffTestsHTMLFiles");
-        dir.mkdirs();
-        HTMLTableDiff.writeHTMLDiffAndContext("TableDiffDemo", dir, diffReport);
     }
 }

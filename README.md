@@ -1,12 +1,11 @@
-[![Build Status](https://travis-ci.org/smootoo/TableDiff.svg?branch=master)](https://travis-ci.org/smootoo/TableDiff)
-[![Coverage Status](https://coveralls.io/repos/smootoo/TableDiff/badge.svg?branch=master)](https://coveralls.io/r/smootoo/TableDiff?branch=master)
+[![Build Status](https://github.com/smootoo/TableDiff/actions/workflows/ci.yml/badge.svg)](https://github.com/smootoo/TableDiff/actions/workflows/ci.yml)
 
 TableDiff
 =========
 
 A Scala based (but usable from Java and other JVM languages) utility for finding a diff of 2 tables, taking account of their structure. 
 
-Available on [maven central](http://search.maven.org/#artifactdetails|org.suecarter|tablediff_2.12|1.0.3|jar)
+Available on [maven central](http://search.maven.org/#artifactdetails|org.suecarter|tablediff_3|1.1|jar)
 
 There are lots of options in the library functions, so for simple usage, you probably want to create little util functions.
 e.g. to compare 2 lists of cases classes.
@@ -66,14 +65,5 @@ been added.
 ```
 
 
-You can render the result in HTML and have something looking like
+There was HTML rendering code that was removed in V1.1. It was old and not used by me any more. Let me know if anyone still needs it.
 
-![JavaTableDiffTest example html](./SampleApp/src/test/resources/JavaTableDiffTest.png)
-
-This can be useful in Jenkins, using the HTML publisher plugin to put test results in an easy to read format.
-
-
-----
-
-The html rendering code is a hacked around version of https://github.com/mmurph211/Grid
-MIT-style license. Copyright 2012 Matt V. Murphy
