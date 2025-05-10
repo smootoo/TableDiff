@@ -81,7 +81,7 @@ object TableDiff {
   private def emptyDiffCells(i: Int) = (0 until i).map(x => Right(None))
 
   // fill in space at top left of table column header if needed
-  protected[tablediff] def flattenColumnHeaders[C](report: ReportContent[_, ValueDiff[C], _]) = {
+  protected[tablediff] def flattenColumnHeaders[C](report: ReportContent[?, ValueDiff[C], ?]) = {
     val paddedRowColumnHeaders =
       (report.rowColumnHeaders.size to report.columnDepth - 1).map(x => Seq()) ++ report.rowColumnHeaders
     paddedRowColumnHeaders.zipAll(report.columnHeaders, Seq(), Seq()).map {
@@ -92,7 +92,7 @@ object TableDiff {
 
   // join up row headers and main table section
   protected[tablediff] def flattenTableRows[T, R <: T, M <: T](
-      report: ReportContent[ValueDiff[R], _, ValueDiff[M]]
+      report: ReportContent[ValueDiff[R], ?, ValueDiff[M]]
   ): ReportSection[ValueDiff[T]] =
     report.rowHeaders
       .zipAll(report.mainData, Seq(), Seq())
@@ -173,7 +173,7 @@ object TableDiff {
         Left(EitherSide(h.iLeft.map(x => h.value), h.iRight.map(a => h.value)))
       else
         Right(Some(h.value))
-    def mainValueDiff(row: DiffLocation[_], col: DiffLocation[_]): ValueDiff[M] = {
+    def mainValueDiff(row: DiffLocation[?], col: DiffLocation[?]): ValueDiff[M] = {
       val left = mainValue(row.iLeft, col.iLeft, leftReport)
       val right = mainValue(row.iRight, col.iRight, rightReport)
       if (mainValueComparison(left, right)) Right(left) else Left(EitherSide(left, right))
@@ -262,7 +262,7 @@ object TableDiff {
     val resultRowColHeaders = zipLCSColumnSection(leftReport.rowColumnHeaders, rightReport.rowColumnHeaders)
 
     // get LCSs for RowHeader section
-    def flattenRowHeaderSection(report: ReportContent[R, _, _]) =
+    def flattenRowHeaderSection(report: ReportContent[R, ?, ?]) =
       if (report.rowSectionWidth > 0) report.rowHeaders else (0 until report.mainDataRows).map(x => Seq[R]())
     val leftRowHeaders = flattenRowHeaderSection(leftReport)
     val rightRowHeaders = flattenRowHeaderSection(rightReport)

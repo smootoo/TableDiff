@@ -559,9 +559,9 @@ class TableDiffTests extends AnyFunSuite {
       (L(L("A", "B"), L("C", "E")), L(L("A", "D"), L("C", "E")), L(L(D("A"), E("B", "D")), L(D("C"), D("E"))))
     )
     def assertReport(
-        leftReport: ReportContent[_, _, _],
-        rightReport: ReportContent[_, _, _],
-        expectedDiff: ReportContent[_, _, _]
+        leftReport: ReportContent[?, ?, ?],
+        rightReport: ReportContent[?, ?, ?],
+        expectedDiff: ReportContent[?, ?, ?]
     ) = {
       val diffReport = produceReportDiff(leftReport, rightReport)
       assert(

@@ -113,7 +113,7 @@ case class ReportContent[+R, +C, +M](
     * check to see if this report is equivalent to right report
     * @return true if all sections are equal.
     */
-  def isEquivalent(rightReport: ReportContent[_, _, _]) =
+  def isEquivalent(rightReport: ReportContent[?, ?, ?]) =
     ((rowWidth == 0 && rightReport.rowWidth == 0) || (rowHeaders == rightReport.rowHeaders && rowColumnHeaders == rightReport.rowColumnHeaders)) &&
       ((columnCount == 0 && rightReport.columnCount == 0) || columnHeaders == rightReport.columnHeaders) &&
       ((mainDataColumnCount == 0 && rightReport.mainDataColumnCount == 0) || mainData == rightReport.mainData)

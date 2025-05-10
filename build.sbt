@@ -4,17 +4,16 @@ organization := "org.suecarter"
 
 name := "tablediff"
 
-crossScalaVersions := Seq("3.2.2", "2.13.10")
-scalaVersion := "3.2.2"
+scalaVersion := "3.7.1"
+crossScalaVersions := Seq(scalaVersion.value, "2.13.16")
 
-version := "1.1"
+version := "1.1.1"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-//resolvers += Resolver.sonatypeRepo("snapshots")
 
 libraryDependencies ++= Seq(
-  "org.apache.commons" % "commons-lang3" % "3.12.0",
-  "org.scalatest" %% "scalatest" % "3.2.15" % "test",
+  "org.apache.commons" % "commons-lang3" % "3.17.0",
+  "org.scalatest" %% "scalatest" % "3.2.19" % "test",
   "com.novocode" % "junit-interface" % "0.11" % Test,
 )
 
@@ -35,29 +34,21 @@ licenses := Seq(
 
 homepage := Some(url("http://github.com/smootoo/TableDiff"))
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases" at nexus + "service/local/staging/deploy/maven2")
-}
+publishTo := localStaging.value
 
-credentials += Credentials(
-  "Sonatype Nexus Repository Manager",
-  "oss.sonatype.org",
-  sys.env.getOrElse("SONATYPE_USERNAME", ""),
-  sys.env.getOrElse("SONATYPE_PASSWORD", "")
+sonatypeProfileName := organization.value
+
+versionScheme := Some("early-semver")
+
+sonatypeProjectHosting := Some(xerial.sbt.Sonatype.GitHubHosting("smootoo", "TableDiff", "squishback@gmail.com"))
+
+developers := List(
+  Developer(id="smootoo", name="Sue Carter", email="squishback@gmail.com", url=url("https://suecarter.org"))
 )
 
-pomExtra :=
-  <scm>
-  <url>git@github.com:smootoo/TableDiff.git</url>
-  <connection>scm:git:git@github.com:smootoo/TableDiff.git</connection>
-</scm>
-<developers>
-   <developer>
-      <id>smootoo</id>
-      <name>Sue Carter</name>
-   </developer>
-</developers>
+scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/smootoo/TableDiff"),
+    "scm:git:git@github.com:smootoo/TableDiff.git"
+  )
+)

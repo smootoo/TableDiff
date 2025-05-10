@@ -12,7 +12,7 @@ object StringTableDiff {
     * @param report
     * @return String representation of the Report
     */
-  def diffReportToString(report: ReportContent[_, _, _]) =
+  def diffReportToString(report: ReportContent[?, ?, ?]) =
     if (report.isEmpty) {
       "Empty report"
     } else {
