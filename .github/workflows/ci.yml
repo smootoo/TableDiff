@@ -2,6 +2,8 @@ name: CI
 on:
   pull_request:
   push:
+  schedule:
+    - cron: '11 5 1 * *'
 jobs:
   test:
     runs-on: ubuntu-latest
