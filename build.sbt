@@ -4,15 +4,14 @@ organization := "org.suecarter"
 
 name := "tablediff"
 
-scalaVersion := "3.7.1"
-crossScalaVersions := Seq(scalaVersion.value, "2.13.16")
+scalaVersion := "3.8.2"
 
-version := "1.1.1"
+version := "1.1.2"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 libraryDependencies ++= Seq(
-  "org.apache.commons" % "commons-lang3" % "3.17.0",
+  "org.apache.commons" % "commons-lang3" % "3.20.0",
   "org.scalatest" %% "scalatest" % "3.2.19" % "test",
   "com.novocode" % "junit-interface" % "0.11" % Test,
 )
@@ -21,7 +20,7 @@ libraryDependencies ++= Seq(
 Test / unmanagedSourceDirectories += baseDirectory.value / "SampleApp/src/test/java"
 
 Compile / scalacOptions ++= Seq(
-  "-Xfatal-warnings",
+  "-Werror",
   "-deprecation",
   "-feature",
 )
