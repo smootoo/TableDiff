@@ -5,7 +5,7 @@ TableDiff
 
 A Scala based (but usable from Java and other JVM languages) utility for finding a diff of 2 tables, taking account of their structure. 
 
-Available on [maven central](http://search.maven.org/#artifactdetails|org.suecarter|tablediff_3|1.1.1|jar)
+Available on [![Maven Central Version](https://img.shields.io/maven-central/v/org.suecarter/tablediff_3)](https://repo1.maven.org/maven2/org/suecarter/tablediff_3/)
 
 There are lots of options in the library functions, so for simple usage, you probably want to create little util functions.
 e.g. to compare 2 lists of cases classes.
