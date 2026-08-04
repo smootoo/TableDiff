@@ -4,15 +4,15 @@ organization := "org.suecarter"
 
 name := "tablediff"
 
-scalaVersion := "3.8.2"
+scalaVersion := "3.8.4"
 
-version := "1.1.2"
+version := "1.1.3"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3" % "3.20.0",
-  "org.scalatest" %% "scalatest" % "3.2.19" % "test",
+  "org.scalatest" %% "scalatest" % "3.2.20" % "test",
   "com.novocode" % "junit-interface" % "0.11" % Test,
 )
 
@@ -27,27 +27,30 @@ Compile / scalacOptions ++= Seq(
 
 fork := true
 
+
+// Publishing
 licenses := Seq(
-  "MIT" -> url("http://opensource.org/licenses/MIT")
+  License.MIT
 )
 
-homepage := Some(url("http://github.com/smootoo/TableDiff"))
+homepage := Some(uri("https://github.com/smootoo/TableDiff"))
 
-publishTo := localStaging.value
-
-sonatypeProfileName := organization.value
+// https://www.scala-sbt.org/2.x/docs/en/recipes/central.html?highlight=sonat#step-2-credentials
+publishTo := {
+  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+  if version.value.endsWith("-SNAPSHOT") then Some("central-snapshots" at centralSnapshots)
+  else localStaging.value
+}
 
 versionScheme := Some("early-semver")
 
-sonatypeProjectHosting := Some(xerial.sbt.Sonatype.GitHubHosting("smootoo", "TableDiff", "squishback@gmail.com"))
-
 developers := List(
-  Developer(id="smootoo", name="Sue Carter", email="squishback@gmail.com", url=url("https://suecarter.org"))
+  Developer(id="smootoo", name="Sue Carter", email="squishback@gmail.com", url=uri("https://suecarter.org"))
 )
 
 scmInfo := Some(
   ScmInfo(
-    url("https://github.com/smootoo/TableDiff"),
+    uri("https://github.com/smootoo/TableDiff"),
     "scm:git:git@github.com:smootoo/TableDiff.git"
   )
 )
