@@ -195,7 +195,7 @@ object TableDiff {
         if (headerRows.isEmpty)
           accumulator
         else {
-          val (head, tailSection): (DiffLocation[ValueDiff[S]], ReportRow[DiffLocation[S]]) = headerRows match {
+          val splitSection: (DiffLocation[ValueDiff[S]], ReportRow[DiffLocation[S]]) = headerRows match {
             case Seq(dlLeft @ DiffLocation(leftValue, Some(leftI), None), tail @ _*) => {
               // find row with just a left value
               val matchingRightValue: Option[(DiffLocation[TableDiff.ValueDiff[S]], ReportRow[DiffLocation[S]])] =
@@ -226,7 +226,7 @@ object TableDiff {
             case Seq(dl @ DiffLocation(_, leftI, rightI), tail @ _*) =>
               (DiffLocation(headerValue(dl), leftI, rightI), tail)
           }
-          inner(accumulator :+ head, tailSection, leftMainData, rightMainData)
+          inner(accumulator :+ splitSection._1, splitSection._2, leftMainData, rightMainData)
         }
       inner(emptyRow, headerRows, leftMainData, rightMainData)
     }

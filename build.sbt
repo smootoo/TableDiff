@@ -4,14 +4,14 @@ organization := "org.suecarter"
 
 name := "tablediff"
 
-scalaVersion := "3.8.4"
+scalaVersion := "3.9.0"
 
-version := "1.1.3"
+version := "1.1.4"
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 libraryDependencies ++= Seq(
-  "org.apache.commons" % "commons-lang3" % "3.20.0",
+  "org.apache.commons" % "commons-lang3" % "3.21.0",
   "org.scalatest" %% "scalatest" % "3.2.20" % "test",
   "com.novocode" % "junit-interface" % "0.11" % Test,
 )
