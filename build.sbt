@@ -2,7 +2,7 @@ import sbt.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-lazy val root =
+lazy val tablediff =
   crossProject(JVMPlatform, JSPlatform)
     .withoutSuffixFor(JVMPlatform)
     .crossType(CrossType.Pure)
