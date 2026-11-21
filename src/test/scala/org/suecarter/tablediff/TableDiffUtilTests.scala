@@ -273,11 +273,6 @@ class TableDiffUtilTests extends AnyFunSuite {
         assert(onlyDiffs === d)
     }
   }
-  test("read chunk env var") {
-    assert(TableDiff.readChunkEnvVar() == TableDiff.diffChunkSize)
-    println(s"testing invalid ${TableDiff.chunkEnvVarName}")
-    assert(TableDiff.readChunkEnvVar(Some("xxx")) == TableDiff.diffChunkSize)
-  }
 }
 
 object TableDiffUtilTests {

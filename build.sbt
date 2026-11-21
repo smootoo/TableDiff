@@ -4,6 +4,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 lazy val root =
   crossProject(JVMPlatform, JSPlatform)
+    .withoutSuffixFor(JVMPlatform)
     .crossType(CrossType.Pure)
     .in(file("."))
     .settings(

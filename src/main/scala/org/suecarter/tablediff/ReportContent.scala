@@ -39,7 +39,7 @@ case class ReportContent[+R, +C, +M](
   // ***
   // ***
   // *
-  private def assertSectionIsTipTriangle[T](section: ReportSection[T], sectionName: String) = {
+  private def assertSectionIsTipTriangle[T](section: ReportSection[T], sectionName: String) =
     assert(
       section.sliding(2).collect { case Seq(l, r) => l.size >= r.size }.forall(x => x),
       sectionName + " section needs to have same or decreasing number of elements in each row\n" +
@@ -48,7 +48,6 @@ case class ReportContent[+R, +C, +M](
           .mkString("\n") + "\n" +
         this
     )
-  }
   assertSectionIsTipTriangle(rowColumnHeaders, "Top left")
   assertSectionIsTipTriangle(columnHeaders, "Top right")
 
@@ -149,44 +148,30 @@ object ReportContent {
   private def zipAllOption[T](left: ReportRow[T], right: ReportRow[T]) =
     left.map(Option(_)) zipAll (right.map(Option(_)), None, None)
 
-  // isEmpty is a best guess at seeing if a value is "Empty". Will delegate to isEmpty method on the object if it exists
-  protected[tablediff] val isEmpty = new PartialFunction[Any, Boolean] {
-    def apply(o: Any) = {
-      val trimmed = o match {
-        case s: String             => s.trim
-        case c: Char               => c.toString.trim
-        case d if d == Right(None) => ""
-        case x                     => x
-      }
-      isDefinedAt(trimmed) && {
-        trimmed match {
-          case a: AnyRef => a.getClass.getMethod("isEmpty").invoke(trimmed).asInstanceOf[Boolean]
-        }
-      }
+  protected[tablediff] def isEmpty(o: Any): Boolean =
+    o match {
+      case s: String             => s.trim.isEmpty
+      case c: Char               => c.toString.trim.isEmpty
+      case d if d == Right(None) => true
+      case iterable: Iterable[_] => iterable.isEmpty
+      case o: Option[_]          => o.isEmpty
+      case _                     => false
     }
-
-    def isDefinedAt(o: Any) =
-      try {
-        o.getClass.getMethod("isEmpty")
-        true
-      } catch {
-        case _: Throwable => false
-      }
-  }
 
   private def fillRow[T](headRow: ReportRow[T], tailRow: ReportRow[T], originalHeadRow: ReportRow[Any]) = {
     val paddedZip = zipAllOption(headRow, tailRow)
-    paddedZip.zipWithIndex.map {
+    paddedZip.zipWithIndex.flatMap {
       case ((head, tail), index) => {
-        def emptyToLeft = paddedZip.take(index).forall { case (_, l) => l.map(isEmpty).getOrElse(true) }
+        def emptyToLeft = paddedZip.take(index).forall { case (_, l) => l.forall(isEmpty) }
+
         tail match {
           case Some(x) if isEmpty(x) && emptyToLeft => head
-          case Some(_)                              => tail
-          case None if emptyToLeft                  => head
-          case None                                 => None
+          case Some(_) => tail
+          case None if emptyToLeft => head
+          case None => None
         }
       }
-    }.flatten
+    }
   }
 
   // only call the removal on a diff report result. This allows the use of Right(None) for an empty cell

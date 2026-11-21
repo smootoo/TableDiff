@@ -443,20 +443,7 @@ object TableDiff {
   }
 
   private val defaultChunkSize = 1000
-  protected[tablediff] lazy val diffChunkSize = readChunkEnvVar()
-  val chunkEnvVarName = "TABLEDIFFCHUNKSIZE"
-  protected[tablediff] def readChunkEnvVar(envOverride: Option[String] = None) = {
-    val chunkEnvVar = envOverride.getOrElse(Properties.envOrElse(chunkEnvVarName, defaultChunkSize.toString))
-    try {
-      chunkEnvVar.toInt
-    } catch {
-      case x: NumberFormatException => {
-        System.err.println(s"Unable to set diff chunk size $chunkEnvVarName=$chunkEnvVar ${x.getMessage}")
-        System.err.println(s"Using defaultChunkSize $defaultChunkSize")
-        defaultChunkSize
-      }
-    }
-  }
+  protected[tablediff] lazy val diffChunkSize = defaultChunkSize
 
   private case class Memoise[A, B](f: A => B) extends (A => B) {
     private val cache = scala.collection.mutable.Map.empty[A, B]
