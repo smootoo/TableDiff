@@ -2,11 +2,10 @@ import sbt.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-lazy val tablediff =
+lazy val tablediff: sbtcrossproject.CrossProject =
   crossProject(JVMPlatform, JSPlatform)
-    .withoutSuffixFor(JVMPlatform)
     .crossType(CrossType.Pure)
-    .in(file("."))
+    .in(file("tabledifflib"))
     .settings(
       organization := "org.suecarter",
       name := "tablediff",
