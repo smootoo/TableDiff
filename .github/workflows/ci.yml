@@ -18,4 +18,4 @@ jobs:
     - name: Setup sbt launcher
       uses: sbt/setup-sbt@v1
     - name: Build and Test
-      run: sbt -v +test
+      run: sbt -v +testFull
